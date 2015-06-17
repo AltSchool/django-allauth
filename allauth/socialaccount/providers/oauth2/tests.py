@@ -14,7 +14,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.utils.http import urlquote_plus as urlquote, urlunquote_plus as urlunquote
-from django.utils import six
+from imp import reload
 
 try:
     from importlib import import_module
@@ -108,16 +108,16 @@ class OAuth2TestsUsesProxy(OAuth2Tests):
 
 
 @override_settings(
-    ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST=
-    'https://cheshirecat,https://tweedledee,',
-    ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST=
-    'sub.domain.com,'
+    ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST=(
+        'https://cheshirecat,https://tweedledee,',
+    ),
+    ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST='sub.domain.com,'
 )
 class OAuth2TestsIsProxy(OAuth2Tests):
     def reload_urls(self):
         for module in sys.modules:
             if module.endswith('urls'):
-                six.moves.reload_module(sys.modules[module])
+                reload(sys.modules[module])
         clear_url_caches()
 
 

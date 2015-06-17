@@ -27,4 +27,14 @@ def default_urlpatterns(provider):
             )
         )
 
+    if app_settings.LOGIN_PROXY_REDIRECT_WHITELIST:
+        urlpatterns += [
+            path(
+                'login/callback/proxy/',
+                proxy_login_callback,
+                kwargs={'callback_view_name': provider.id + '_callback'},
+                name=provider.id + '_proxy'
+            ),
+        ]
+
     return [path(provider.get_slug() + '/', include(urlpatterns))]
