@@ -17,7 +17,13 @@ from allauth.compat import (
     python_2_unicode_compatible,
     ugettext_lazy as _,
 )
-from allauth.utils import build_absolute_uri, get_user_model
+from allauth.utils import (
+    build_absolute_uri,
+    deserialize_instance,
+    get_current_site,
+    get_user_model,
+    serialize_instance,
+)
 
 from ..utils import get_request_param
 from . import app_settings, providers

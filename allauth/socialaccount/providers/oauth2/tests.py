@@ -32,6 +32,7 @@ from requests.exceptions import HTTPError
 
 from .views import OAuth2Adapter, OAuth2LoginView, proxy_login_callback, MissingParameter
 
+
 def get_current_site(request=None):
     """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
     by request in Django >= 1.8.
@@ -143,7 +144,7 @@ class OAuth2TestsIsProxy(OAuth2Tests):
                 self.request, callback_view_name='fake_callback')
 
     def test_rejects_request_with_unwhitelisted_host(self):
-        state = {'host': 'https://bar.domain.com'}
+        state = {'host': 'https://tweedledum'}
         self.init_request(
             'fake_proxy', dict(process='login', state=json.dumps(state)))
         with self.assertRaises(PermissionDenied):

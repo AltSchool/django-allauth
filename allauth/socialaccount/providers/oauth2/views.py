@@ -1,9 +1,6 @@
 from __future__ import absolute_import
 
 from datetime import timedelta
-
-from allauth.compat import urlparse, urljoin
-
 from requests import RequestException
 
 
@@ -13,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from allauth.account import app_settings
+from allauth.compat import urlparse, urljoin
 from allauth.exceptions import ImmediateHttpResponse
 from allauth.socialaccount import providers
 from allauth.socialaccount.helpers import (
@@ -84,14 +82,13 @@ class OAuth2View(object):
         return view
 
     def get_client(self, request, app):
-        callback_url = reverse(self.adapter.provider_id + "_callback")
         if app_settings.LOGIN_CALLBACK_PROXY:
+            callback_url = reverse(self.adapter.provider_id + "_callback")
             callback_url = urljoin(app_settings.LOGIN_CALLBACK_PROXY, callback_url)
             callback_url = '%s/proxy/' % callback_url.rstrip('/')
         else:
-            callback_url = build_absolute_uri(
-                request, callback_url,
-                protocol=self.adapter.redirect_uri_protocol)
+            callback_url = self.adapter.get_callback_url(request, app)
+
         provider = self.adapter.get_provider()
         scope = provider.get_scope(request)
         client = OAuth2Client(self.request, app.client_id, app.secret,
