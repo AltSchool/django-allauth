@@ -61,7 +61,6 @@ def callback(request):
         app = providers.registry.by_id(DraugiemProvider.id, request).get_app(request)
         login = draugiem_complete_login(request, app, request.GET["dr_auth_code"])
         login.state = SocialLogin.unstash_state(request)
-
         ret = complete_social_login(request, login)
     except (requests.RequestException, DraugiemApiError) as e:
         auth_exception = e
@@ -77,8 +76,7 @@ def callback(request):
 def draugiem_complete_login(request, app, code):
     provider = providers.registry.by_id(DraugiemProvider.id, request)
     response = requests.get(
-        ACCESS_TOKEN_URL,
-        {"action": "authorize", "app": app.secret, "code": code},
+        ACCESS_TOKEN_URL, {"action": "authorize", "app": app.secret, "code": code},
     )
     response.raise_for_status()
     response_json = response.json()

@@ -1,7 +1,9 @@
 from __future__ import absolute_import
 
+import json
 from datetime import timedelta
 from requests import RequestException
+from urllib.parse import urljoin, urlparse
 
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
@@ -25,7 +27,12 @@ from allauth.socialaccount.providers.oauth2.client import (
     OAuth2Client,
     OAuth2Error,
 )
+from allauth.account import app_settings
 from allauth.utils import build_absolute_uri, get_request_param
+
+
+class MissingParameter(Exception):
+    pass
 
 
 class OAuth2Adapter(object):
@@ -84,7 +91,12 @@ class OAuth2View(object):
         return view
 
     def get_client(self, request, app):
-        callback_url = self.adapter.get_callback_url(request, app)
+        if app_settings.LOGIN_CALLBACK_PROXY:
+            callback_url = reverse(self.adapter.provider_id + "_callback")
+            callback_url = urljoin(app_settings.LOGIN_CALLBACK_PROXY, callback_url)
+            callback_url = "%s/proxy/" % callback_url.rstrip("/")
+        else:
+            callback_url = self.adapter.get_callback_url(request, app)
         provider = self.adapter.get_provider()
         scope = provider.get_scope(request)
         client = self.adapter.client_class(
@@ -103,6 +115,19 @@ class OAuth2View(object):
 
 
 class OAuth2LoginView(OAuthLoginMixin, OAuth2View):
+    def dispatch(self, request, *args, **kwargs):
+        provider = self.adapter.get_provider()
+        app = provider.get_app(self.request)
+        client = self.get_client(request, app)
+        action = request.GET.get("action", AuthAction.AUTHENTICATE)
+        auth_url = self.adapter.authorize_url
+        auth_params = provider.get_auth_params(request, action)
+        client.state = SocialLogin.stash_state(request)
+        try:
+            return HttpResponseRedirect(client.get_redirect_url(auth_url, auth_params))
+        except OAuth2Error as e:
+            return render_authentication_error(request, provider.id, exception=e)
+
     def login(self, request, *args, **kwargs):
         provider = self.adapter.get_provider()
         app = provider.get_app(self.request)
@@ -157,3 +182,44 @@ class OAuth2CallbackView(OAuth2View):
             return render_authentication_error(
                 request, self.adapter.provider_id, exception=e
             )
+
+
+def target_in_whitelist(parsed_target):
+    target_loc = parsed_target.netloc
+    target_scheme = parsed_target.scheme
+    for allowed in app_settings.LOGIN_PROXY_REDIRECT_WHITELIST:
+        parsed_allowed = urlparse(allowed)
+        allowed_loc = parsed_allowed.netloc
+        allowed_scheme = parsed_allowed.scheme
+        if target_loc == allowed_loc and target_scheme == allowed_scheme:
+            return True
+    for allowed in app_settings.LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST:
+        if not allowed.startswith("http"):
+            allowed = f"https://{allowed}"  # scheme doesnt patter to us, but is required for urlparse
+        parsed_allowed = urlparse(allowed)
+        allowed_loc = parsed_allowed.netloc
+        if allowed_loc and target_loc.endswith(allowed_loc):
+            return True
+    return False
+
+
+def proxy_login_callback(request, **kwargs):
+    unverified_state = get_request_param(request, "state")
+    unverified_state = json.loads(unverified_state) if unverified_state else {}
+
+    if "host" not in unverified_state:
+        raise MissingParameter()
+
+    parsed_target = urlparse(unverified_state["host"])
+    if not target_in_whitelist(parsed_target):
+        raise PermissionDenied()
+
+    relative_callback = reverse(kwargs.get("callback_view_name"))
+    redirect = urljoin(unverified_state["host"], relative_callback)
+
+    # URLUnparse would be ideal here, but it's buggy.
+    # It used a semicolon instead of a question mark, which neither Django nor I
+    # understand. Neither of us have time for that nonsense, so add params
+    # manually.
+    redirect_with_params = "%s?%s" % (redirect, request.GET.urlencode())
+    return HttpResponseRedirect(redirect_with_params)

@@ -1,5 +1,8 @@
 from __future__ import absolute_import
 
+import json
+from django.core.exceptions import PermissionDenied
+from django.db import models
 from django.contrib.auth import authenticate
 from django.contrib.sites.models import Site
 from django.contrib.sites.shortcuts import get_current_site
@@ -12,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 import allauth.app_settings
 from allauth.account.models import EmailAddress
 from allauth.account.utils import get_next_redirect_url, setup_user_email
-from allauth.utils import get_user_model
+from allauth.utils import get_user_model, build_absolute_uri
 
 from ..utils import get_request_param
 from . import app_settings, providers
@@ -300,6 +303,7 @@ class SocialLogin(object):
         next_url = get_next_redirect_url(request)
         if next_url:
             state["next"] = next_url
+        state["host"] = build_absolute_uri(request, "")
         state["process"] = get_request_param(request, "process", "login")
         state["scope"] = get_request_param(request, "scope", "")
         state["auth_params"] = get_request_param(request, "auth_params", "")
@@ -309,21 +313,20 @@ class SocialLogin(object):
     def stash_state(cls, request):
         state = cls.state_from_request(request)
         verifier = get_random_string(12)
-        request.session["socialaccount_state"] = (state, verifier)
-        return verifier
+        state["verifier"] = verifier
+        request.session["socialaccount_state"] = state
+        return json.dumps(state)
 
     @classmethod
     def unstash_state(cls, request):
         if "socialaccount_state" not in request.session:
             raise PermissionDenied()
-        state, verifier = request.session.pop("socialaccount_state")
-        return state
+        return request.session.pop("socialaccount_state")
 
     @classmethod
-    def verify_and_unstash_state(cls, request, verifier):
-        if "socialaccount_state" not in request.session:
-            raise PermissionDenied()
-        state, verifier2 = request.session.pop("socialaccount_state")
-        if verifier != verifier2:
+    def verify_and_unstash_state(cls, request, state):
+        saved_state = cls.unstash_state(request)
+        state = json.loads(state)
+        if state.get("verifier") != saved_state.get("verifier"):
             raise PermissionDenied()
         return state

@@ -79,10 +79,12 @@ class DraugiemTests(TestCase):
         params and a random string
         """
         session = self.client.session
-        session["socialaccount_state"] = (
-            {"process": "login", "scope": "", "auth_params": ""},
-            "12345",
-        )
+        session["socialaccount_state"] = {
+            "verifier": "12345",
+            "process": "login",
+            "scope": "",
+            "auth_params": "",
+        }
         session.save()
 
     def test_login_redirect(self):
@@ -124,8 +126,7 @@ class DraugiemTests(TestCase):
             draugiem_complete_login.return_value = login
 
             response = self.client.get(
-                reverse(views.callback),
-                {"dr_auth_status": "ok", "dr_auth_code": "42"},
+                reverse(views.callback), {"dr_auth_status": "ok", "dr_auth_code": "42"},
             )
             self.assertRedirects(
                 response, "/accounts/profile/", fetch_redirect_response=False

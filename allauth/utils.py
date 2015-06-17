@@ -10,7 +10,6 @@ from urllib.parse import urlsplit
 
 import django
 from django.contrib.auth import get_user_model
-from django.contrib.sites.models import Site
 from django.core.exceptions import FieldDoesNotExist, ImproperlyConfigured
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError, validate_email
@@ -269,6 +268,7 @@ def build_absolute_uri(request, location, protocol=None):
     the case where request is None.
     """
     from .account import app_settings as account_settings
+    from django.contrib.sites.models import Site
 
     if request is None:
         site = Site.objects.get_current()
