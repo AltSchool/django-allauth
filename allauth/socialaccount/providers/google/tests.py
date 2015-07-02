@@ -221,6 +221,7 @@ class GoogleTests(OAuth2TestsMixin, TestCase):
         client = androidCallback.get_client(androidCallback.request, app)
         self.assertEqual("", client.callback_url)
 
+
 @override_settings(
     SOCIALACCOUNT_PROVIDERS={
         'google': {

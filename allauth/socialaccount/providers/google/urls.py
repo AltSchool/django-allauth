@@ -6,7 +6,7 @@ from .views import oauth2_callback_android
 
 
 urlpatterns = default_urlpatterns(GoogleProvider)
-urlpatterns += [
+lurlpatterns += [
     url('^' + GoogleProvider.id + '/login/callback_android/$',
         oauth2_callback_android,
         name=GoogleProvider.id + '_callback_android'
