@@ -214,8 +214,8 @@ class GoogleTests(OAuth2TestsMixin, TestCase):
         from allauth.socialaccount.providers.google.views import GoogleOAuth2AndroidCallbackView
 
         androidCallback = GoogleOAuth2AndroidCallbackView()
+        androidCallback.adapter = GoogleOAuth2Adapter()
         androidCallback.request = RequestFactory().get(reverse(self.provider.id + '_callback_android'))
-        androidCallback.adapter = GoogleOAuth2Adapter(androidCallback.request)
         app = androidCallback.adapter.get_provider().get_app(androidCallback.request)
 
         client = androidCallback.get_client(androidCallback.request, app)
