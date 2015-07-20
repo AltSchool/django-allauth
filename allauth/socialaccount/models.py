@@ -316,6 +316,8 @@ class SocialLogin(object):
     def parse_and_verify_url_state(cls, request):
         session_state = cls.unstash_state(request)
         url_state = cls.parse_url_state(request)
+        print '### session state:\n' + str(session_state)
+        print '### url     state:\n' + str(url_state)
         if session_state['verifier'] != url_state['verifier']:
             raise PermissionDenied()
         return url_state
