@@ -127,6 +127,7 @@ def _add_social_account(request, sociallogin):
 
 
 def complete_social_login(request, sociallogin):
+    print '### complete social login'
     assert not sociallogin.is_existing
     sociallogin.lookup()
     try:
@@ -135,13 +136,18 @@ def complete_social_login(request, sociallogin):
                                       request=request,
                                       sociallogin=sociallogin)
     except ImmediateHttpResponse as e:
+        print '### failed presocial'
         return e.response
     process = sociallogin.state.get('process')
+    print '### process is %s' % process
     if process == AuthProcess.REDIRECT:
+        print '### redirect'
         return _social_login_redirect(request, sociallogin)
     elif process == AuthProcess.CONNECT:
+        print '### connect'
         return _add_social_account(request, sociallogin)
     else:
+        print '### not redirect not connect'
         return _complete_social_login(request, sociallogin)
 
 
@@ -151,12 +157,16 @@ def _social_login_redirect(request, sociallogin):
 
 
 def _complete_social_login(request, sociallogin):
+    print '### csl'
     if request.user.is_authenticated():
+        print '### is authenticated. logout request'
         logout(request)
     if sociallogin.is_existing:
+        print '### is existing account'
         # Login existing user
         ret = _login_social_account(request, sociallogin)
     else:
+        print '### new social user'
         # New social user
         ret = _process_signup(request, sociallogin)
     return ret
