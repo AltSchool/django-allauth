@@ -24,17 +24,23 @@ def _process_signup(request, sociallogin):
     auto_signup = get_adapter().is_auto_signup_allowed(request,
                                                        sociallogin)
     if not auto_signup:
+        print '### not auto'
         request.session['socialaccount_sociallogin'] = sociallogin.serialize()
         url = reverse('socialaccount_signup')
+        print '### redirecting to %s' % url
         ret = HttpResponseRedirect(url)
     else:
+        print '### yes auto'
         # Ok, auto signup it is, at least the e-mail address is ok.
         # We still need to check the username though...
         if account_settings.USER_MODEL_USERNAME_FIELD:
+            print '### UMUF: %s' % account_settings.USER_MODEL_USERNAME_FIELD
             username = user_username(sociallogin.user)
             try:
+                print '### cleaning username: %s' % username
                 get_account_adapter().clean_username(username)
             except ValidationError:
+                print '### validation err'
                 # This username is no good ...
                 user_username(sociallogin.user, '')
         # FIXME: This part contains a lot of duplication of logic
@@ -43,11 +49,15 @@ def _process_signup(request, sociallogin):
         try:
             if not get_adapter().is_open_for_signup(request,
                                                     sociallogin):
+                print '### signupt locsed'
                 return render(request,
                               "account/signup_closed.html")
         except ImmediateHttpResponse as e:
+            print '### immediate response %s' % str(e)
             return e.response
+        print '### saving user'
         get_adapter().save_user(request, sociallogin, form=None)
+        print '### completing social signup'
         ret = complete_social_signup(request, sociallogin)
     return ret
 
@@ -173,6 +183,7 @@ def _complete_social_login(request, sociallogin):
 
 
 def complete_social_signup(request, sociallogin):
+    print '### complete_social_signup'
     return complete_signup(request,
                            sociallogin.user,
                            app_settings.EMAIL_VERIFICATION,
