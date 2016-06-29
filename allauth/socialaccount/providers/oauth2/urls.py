@@ -27,7 +27,10 @@ def default_urlpatterns(provider):
             )
         )
 
-    if app_settings.LOGIN_PROXY_REDIRECT_WHITELIST:
+    if (
+        app_settings.LOGIN_PROXY_REDIRECT_WHITELIST or
+        app_settings.LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST
+    ):
         urlpatterns += [
             path(
                 'login/callback/proxy/',
