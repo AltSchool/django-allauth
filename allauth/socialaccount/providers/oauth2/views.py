@@ -178,6 +178,7 @@ def target_in_whitelist(parsed_target):
             # Without a scheme, urlparse will recognize the input as a path and
             # not a netloc.
             allowed = '//%s' % allowed
+
         parsed_allowed = urlparse(allowed)
         allowed_loc = parsed_allowed.netloc
         if target_loc.endswith(allowed_loc):
