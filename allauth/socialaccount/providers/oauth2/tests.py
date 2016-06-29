@@ -144,7 +144,7 @@ class OAuth2TestsIsProxy(OAuth2Tests):
                 self.request, callback_view_name='fake_callback')
 
     def test_rejects_request_with_unwhitelisted_host(self):
-        state = {'host': 'https://tweedledum'}
+        state = {'host': 'https://bar.domain.com'}
         self.init_request(
             'fake_proxy', dict(process='login', state=json.dumps(state)))
         with self.assertRaises(PermissionDenied):

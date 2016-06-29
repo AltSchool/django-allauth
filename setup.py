@@ -116,7 +116,7 @@ version = __import__('allauth').__version__
 
 METADATA = dict(
     name='django-allauth',
-    version=version,
+    version='0.20.1',
     author='Raymond Penners',
     author_email='raymond.penners@intenct.nl',
     description='Integrated set of Django applications addressing'
