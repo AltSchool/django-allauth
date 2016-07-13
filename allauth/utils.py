@@ -10,7 +10,6 @@ from django.db.models import FieldDoesNotExist
 from django.db.models.fields import (DateTimeField, DateField,
                                      EmailField, TimeField)
 from django.utils import six, dateparse
-from django.utils.datastructures import SortedDict
 from django.core.serializers.json import DjangoJSONEncoder
 try:
     from django.utils.encoding import force_text
@@ -203,7 +202,7 @@ def deserialize_instance(model, data):
 
 
 def set_form_field_order(form, fields_order):
-    if isinstance(form.fields, SortedDict):
+    if hasattr(form.fields, 'keyOrder'): 
         form.fields.keyOrder = fields_order
     else:
         # Python 2.7+
