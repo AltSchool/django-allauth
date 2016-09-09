@@ -88,7 +88,13 @@ class OAuth2LoginView(OAuth2View):
         action = request.GET.get('action', AuthAction.AUTHENTICATE)
         auth_url = self.adapter.authorize_url
         auth_params = provider.get_auth_params(request, action)
+        print('### stashing state')
+        from django.conf import settings
+        print('### DB URL:')
+        from pprint import pprint
+        pprint(settings.DATABASES)
         client.state = SocialLogin.stash_state(request)
+        print('### state stashed')
         try:
             return HttpResponseRedirect(client.get_redirect_url(
                 auth_url, auth_params))
@@ -130,6 +136,8 @@ class OAuth2CallbackView(OAuth2View):
                                                 token,
                                                 response=access_token)
             print '### post-adapter-complete login'
+            from django.conf import settings
+            pprint(settings.DATABASES)
             login.token = token
             if self.adapter.supports_state:
                 print '### pre-parse-and-verify'

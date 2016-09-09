@@ -295,7 +295,9 @@ class SocialLogin(object):
         state = cls.state_from_request(request)
         verifier = get_random_string()
         state['verifier'] = verifier
+        print '### stashing state %s' % state
         request.session['socialaccount_state'] = state
+        print '### session key %s' % request.session.session_key
         return json.dumps(state)
 
     @classmethod
