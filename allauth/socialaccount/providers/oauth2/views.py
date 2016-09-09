@@ -82,6 +82,7 @@ class OAuth2View(object):
 
 class OAuth2LoginView(OAuth2View):
     def dispatch(self, request):
+        print '### session key login %s' % request.session.session_key
         provider = self.adapter.get_provider()
         app = provider.get_app(self.request)
         client = self.get_client(request, app)
@@ -111,6 +112,7 @@ class OAuth2LoginView(OAuth2View):
 class OAuth2CallbackView(OAuth2View):
     def dispatch(self, request):
         from pprint import pprint
+        print '### session key callback %s' % request.session.session_key
         print('### request:')
         pprint(request)
         print('### callback session:')
