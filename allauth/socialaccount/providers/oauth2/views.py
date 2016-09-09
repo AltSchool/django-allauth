@@ -101,6 +101,9 @@ class OAuth2LoginView(OAuth2View):
 
 class OAuth2CallbackView(OAuth2View):
     def dispatch(self, request):
+        from pprint import pprint
+        print('### request:')
+        pprint(request)
         if 'error' in request.GET or 'code' not in request.GET:
             # Distinguish cancel from error
             auth_error = request.GET.get('error', None)
@@ -108,6 +111,8 @@ class OAuth2CallbackView(OAuth2View):
                 error = AuthError.CANCELLED
             else:
                 error = AuthError.UNKNOWN
+            print('### auth error:')
+            pprint(error)
             return render_authentication_error(
                 request,
                 self.adapter.provider_id,
@@ -118,17 +123,29 @@ class OAuth2CallbackView(OAuth2View):
             access_token = client.get_access_token(request.GET['code'])
             token = self.adapter.parse_token(access_token)
             token.app = app
+            print '### pre-adapter-complete-login'
+            print '### token: %s' % token
             login = self.adapter.complete_login(request,
                                                 app,
                                                 token,
                                                 response=access_token)
+            print '### post-adapter-complete login'
             login.token = token
             if self.adapter.supports_state:
+                print '### pre-parse-and-verify'
                 login.state = SocialLogin.parse_and_verify_url_state(request)
+                print '### post-parse-and-verify'
             else:
+                print '### pre unstash'
                 login.state = SocialLogin.unstash_state(request)
+                print '### post unstash'
+            print '### pre-complete-social-login'
             return complete_social_login(request, login)
+            print '### post-complete-login'
         except (PermissionDenied, OAuth2Error) as e:
+            print '### ERROR!!!'
+            import traceback
+            traceback.print_exc(e)
             return render_authentication_error(
                 request,
                 self.adapter.provider_id,
