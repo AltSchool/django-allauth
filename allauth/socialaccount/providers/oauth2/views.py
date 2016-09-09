@@ -97,7 +97,7 @@ class OAuth2LoginView(OAuth2View):
         print('### state stashed')
 
         print('### login session:')
-        pprint(request.session)
+        pprint(request.session.__dict__)
         try:
             return HttpResponseRedirect(client.get_redirect_url(
                 auth_url, auth_params))
@@ -114,7 +114,7 @@ class OAuth2CallbackView(OAuth2View):
         print('### request:')
         pprint(request)
         print('### callback session:')
-        pprint(request.session)
+        pprint(request.session.__dict__)
         if 'error' in request.GET or 'code' not in request.GET:
             # Distinguish cancel from error
             auth_error = request.GET.get('error', None)
