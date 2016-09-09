@@ -95,6 +95,9 @@ class OAuth2LoginView(OAuth2View):
         pprint(settings.DATABASES)
         client.state = SocialLogin.stash_state(request)
         print('### state stashed')
+
+        print('### login session:')
+        pprint(request.session)
         try:
             return HttpResponseRedirect(client.get_redirect_url(
                 auth_url, auth_params))
@@ -110,6 +113,8 @@ class OAuth2CallbackView(OAuth2View):
         from pprint import pprint
         print('### request:')
         pprint(request)
+        print('### callback session:')
+        pprint(request.session)
         if 'error' in request.GET or 'code' not in request.GET:
             # Distinguish cancel from error
             auth_error = request.GET.get('error', None)
