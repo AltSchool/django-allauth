@@ -31,13 +31,13 @@ def default_urlpatterns(provider):
         app_settings.LOGIN_PROXY_REDIRECT_WHITELIST or
         app_settings.LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST
     ):
-        urlpatterns += [
+        urlpatterns.append(
             path(
                 'login/callback/proxy/',
                 proxy_login_callback,
                 kwargs={'callback_view_name': provider.id + '_callback'},
                 name=provider.id + '_proxy'
             ),
-        ]
+        )
 
     return [path(provider.get_slug() + '/', include(urlpatterns))]

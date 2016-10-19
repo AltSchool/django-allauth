@@ -272,6 +272,10 @@ ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST (="")
   List of remote servers to which this server may forward OAuth2 token proxy
   redirects (see above).
 
+ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST (="")
+  List of remote servers to which this server may forward OAuth2 token proxy
+  redirects (see above).
+
 ACCOUNT_PASSWORD_INPUT_RENDER_VALUE (=False)
   `render_value` parameter as passed to `PasswordInput` fields.
 
