@@ -6,7 +6,9 @@ from django.core.exceptions import ValidationError
 
 from ..utils import (import_attribute,
                      email_address_exists,
-                     valid_email_or_none)
+                     valid_email_or_none,
+                     serialize_instance,
+                     deserialize_instance)
 from ..account.utils import user_email, user_username, user_field
 from ..account.models import EmailAddress
 from ..account.adapter import get_adapter as get_account_adapter
@@ -17,6 +19,16 @@ from . import app_settings
 
 
 class DefaultSocialAccountAdapter(object):
+
+    error_messages = {
+        'email_taken':
+        _("An account already exists with this e-mail address."
+          " Please sign in to that account first, then connect"
+          " your %s account.")
+    }
+
+    def __init__(self, request=None):
+        self.request = request
 
     def pre_social_login(self, request, sociallogin):
         """
@@ -134,14 +146,16 @@ class DefaultSocialAccountAdapter(object):
             if email:
                 if account_settings.UNIQUE_EMAIL:
                     if email_address_exists(email):
-                        # Oops, another user already has this address.  We
-                        # cannot simply connect this social account to the
-                        # existing user. Reason is that the email adress may
-                        # not be verified, meaning, the user may be a hacker
-                        # that has added your email address to their account in
-                        # the hope that you fall in their trap.  We cannot check
-                        # on 'email_address.verified' either, because
-                        # 'email_address' is not guaranteed to be verified.
+                        # Oops, another user already has this address.
+                        # We cannot simply connect this social account
+                        # to the existing user. Reason is that the
+                        # email adress may not be verified, meaning,
+                        # the user may be a hacker that has added your
+                        # email address to their account in the hope
+                        # that you fall in their trap.  We cannot
+                        # check on 'email_address.verified' either,
+                        # because 'email_address' is not guaranteed to
+                        # be verified.
                         auto_signup = False
                         # FIXME: We redirect to signup form -- user will
                         # see email address conflict only after posting
@@ -158,8 +172,23 @@ class DefaultSocialAccountAdapter(object):
         Next to simply returning True/False you can also intervene the
         regular flow by raising an ImmediateHttpResponse
         """
-        return get_account_adapter().is_open_for_signup(request)
+        return get_account_adapter(request).is_open_for_signup(request)
+
+    def get_signup_form_initial_data(self, sociallogin):
+        user = sociallogin.user
+        initial = {
+            'email': user_email(user) or '',
+            'username': user_username(user) or '',
+            'first_name': user_field(user, 'first_name') or '',
+            'last_name': user_field(user, 'last_name') or ''}
+        return initial
+
+    def deserialize_instance(self, model, data):
+        return deserialize_instance(model, data)
+
+    def serialize_instance(self, instance):
+        return serialize_instance(instance)
 
 
-def get_adapter():
-    return import_attribute(app_settings.ADAPTER)()
+def get_adapter(request=None):
+    return import_attribute(app_settings.ADAPTER)(request)

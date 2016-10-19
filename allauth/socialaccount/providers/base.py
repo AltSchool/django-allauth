@@ -3,7 +3,6 @@ from django.utils.encoding import python_2_unicode_compatible
 from allauth.socialaccount import app_settings
 from allauth.account.models import EmailAddress
 
-from ..models import SocialApp, SocialAccount, SocialLogin
 from ..adapter import get_adapter
 
 
@@ -25,6 +24,16 @@ class AuthError(object):
 
 
 class Provider(object):
+
+    slug = None
+
+    def __init__(self, request):
+        self.request = request
+
+    @classmethod
+    def get_slug(cls):
+        return cls.slug or cls.id
+
     def get_login_url(self, request, next=None, **kwargs):
         """
         Builds the URL to redirect to when initiating a login for this
@@ -33,7 +42,10 @@ class Provider(object):
         raise NotImplementedError("get_login_url() for " + self.name)
 
     def get_app(self, request):
-        return SocialApp.objects.get_current(self.id)
+        # NOTE: Avoid loading models at top due to registry boot...
+        from allauth.socialaccount.models import SocialApp
+
+        return SocialApp.objects.get_current(self.id, request)
 
     def media_js(self, request):
         """
@@ -63,7 +75,10 @@ class Provider(object):
             social auth provider.
         :return: A populated instance of the `SocialLogin` model (unsaved).
         """
-        adapter = get_adapter()
+        # NOTE: Avoid loading models at top due to registry boot...
+        from allauth.socialaccount.models import SocialLogin, SocialAccount
+
+        adapter = get_adapter(request)
         uid = self.extract_uid(response)
         extra_data = self.extract_extra_data(response)
         common_fields = self.extract_common_fields(response)
@@ -134,6 +149,13 @@ class Provider(object):
                       primary=True)]
         """
         return []
+
+    @classmethod
+    def get_package(cls):
+        pkg = getattr(cls, 'package', None)
+        if not pkg:
+            pkg = cls.__module__.rpartition('.')[0]
+        return pkg
 
 
 @python_2_unicode_compatible

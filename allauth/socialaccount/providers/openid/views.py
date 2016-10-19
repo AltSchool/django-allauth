@@ -1,5 +1,4 @@
-from django.shortcuts import render_to_response
-from django.template import RequestContext
+from django.shortcuts import render
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.views.decorators.csrf import csrf_exempt
@@ -68,8 +67,7 @@ def login(request):
         form = LoginForm(initial={'next': request.GET.get('next'),
                                   'process': request.GET.get('process')})
     d = dict(form=form)
-    return render_to_response('openid/login.html',
-                              d, context_instance=RequestContext(request))
+    return render(request, "openid/login.html", d)
 
 
 @csrf_exempt
@@ -80,7 +78,7 @@ def callback(request):
         request.build_absolute_uri(request.path))
     if response.status == consumer.SUCCESS:
         login = providers.registry \
-            .by_id(OpenIDProvider.id) \
+            .by_id(OpenIDProvider.id, request) \
             .sociallogin_from_response(request, response)
         login.state = SocialLogin.unstash_state(request)
         ret = complete_social_login(request, login)

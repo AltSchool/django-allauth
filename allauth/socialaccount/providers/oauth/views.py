@@ -14,6 +14,9 @@ from ..base import AuthAction, AuthError
 
 class OAuthAdapter(object):
 
+    def __init__(self, request):
+        self.request = request
+
     def complete_login(self, request, app):
         """
         Returns a SocialLogin instance
@@ -21,7 +24,7 @@ class OAuthAdapter(object):
         raise NotImplementedError
 
     def get_provider(self):
-        return providers.registry.by_id(self.provider_id)
+        return providers.registry.by_id(self.provider_id, self.request)
 
 
 class OAuthView(object):
@@ -30,7 +33,7 @@ class OAuthView(object):
         def view(request, *args, **kwargs):
             self = cls()
             self.request = request
-            self.adapter = adapter()
+            self.adapter = adapter(request)
             return self.dispatch(request, *args, **kwargs)
         return view
 
@@ -57,9 +60,10 @@ class OAuthLoginView(OAuthView):
         provider = self.adapter.get_provider()
         auth_url = provider.get_auth_url(request,
                                          action) or self.adapter.authorize_url
+        auth_params = provider.get_auth_params(request, action)
         client = self._get_client(request, callback_url)
         try:
-            return client.get_redirect(auth_url)
+            return client.get_redirect(auth_url, auth_params)
         except OAuthError as e:
             return render_authentication_error(request,
                                                self.adapter.provider_id,

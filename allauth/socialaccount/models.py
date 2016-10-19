@@ -17,10 +17,9 @@ except ImportError:
 import allauth.app_settings
 from allauth.account.models import EmailAddress
 from allauth.account.utils import get_next_redirect_url, setup_user_email
-from allauth.utils import (get_user_model, get_current_site,
-                           serialize_instance, deserialize_instance,
-                           build_absolute_uri)
+from allauth.utils import (get_user_model, get_current_site, build_absolute_uri)
 
+from .adapter import get_adapter
 from . import app_settings
 from . import providers
 from .fields import JSONField
@@ -29,9 +28,18 @@ from ..utils import get_request_param
 
 class SocialAppManager(models.Manager):
     def get_current(self, provider, request=None):
-        site = get_current_site(request)
-        return self.get(sites__id=site.id,
-                        provider=provider)
+        cache = {}
+        if request:
+            cache = getattr(request, '_socialapp_cache', {})
+            request._socialapp_cache = cache
+        app = cache.get(provider)
+        if not app:
+            site = get_current_site(request)
+            app = self.get(
+                sites__id=site.id,
+                provider=provider)
+            cache[provider] = app
+        return app
 
 
 @python_2_unicode_compatible
@@ -44,14 +52,14 @@ class SocialApp(models.Model):
     name = models.CharField(verbose_name=_('name'),
                             max_length=40)
     client_id = models.CharField(verbose_name=_('client id'),
-                                 max_length=100,
+                                 max_length=191,
                                  help_text=_('App ID, or consumer key'))
     secret = models.CharField(verbose_name=_('secret key'),
-                              max_length=100,
+                              max_length=191,
                               help_text=_('API secret, client secret, or'
                               ' consumer secret'))
     key = models.CharField(verbose_name=_('key'),
-                           max_length=100,
+                           max_length=191,
                            blank=True,
                            help_text=_('Key'))
     # Most apps can be used across multiple domains, therefore we use
@@ -78,23 +86,25 @@ class SocialAccount(models.Model):
     # to fit in a 'uid':
     #
     # Ideally, URLField(max_length=1024, unique=True) would be used
-    # for identity.  However, MySQL has a max_length limitation of 255
-    # for URLField. How about models.TextField(unique=True) then?
-    # Well, that won't work either for MySQL due to another bug[1]. So
-    # the only way out would be to drop the unique constraint, or
-    # switch to shorter identity URLs. Opted for the latter, as [2]
-    # suggests that identity URLs are supposed to be short anyway, at
-    # least for the old spec.
+    # for identity.  However, MySQL has a max_length limitation of 191
+    # for URLField (in case of utf8mb4). How about
+    # models.TextField(unique=True) then?  Well, that won't work
+    # either for MySQL due to another bug[1]. So the only way out
+    # would be to drop the unique constraint, or switch to shorter
+    # identity URLs. Opted for the latter, as [2] suggests that
+    # identity URLs are supposed to be short anyway, at least for the
+    # old spec.
     #
     # [1] http://code.djangoproject.com/ticket/2495.
     # [2] http://openid.net/specs/openid-authentication-1_1.html#limits
 
-    uid = models.CharField(verbose_name=_('uid'), max_length=255)
+    uid = models.CharField(verbose_name=_('uid'),
+                           max_length=app_settings.UID_MAX_LENGTH)
     last_login = models.DateTimeField(verbose_name=_('last login'),
                                       auto_now=True)
     date_joined = models.DateTimeField(verbose_name=_('date joined'),
                                        auto_now_add=True)
-    extra_data = JSONField(verbose_name=_('extra data'), default='{}')
+    extra_data = JSONField(verbose_name=_('extra data'), default=dict)
 
     class Meta:
         unique_together = ('provider', 'uid')
@@ -124,15 +134,15 @@ class SocialAccount(models.Model):
 class SocialToken(models.Model):
     app = models.ForeignKey(SocialApp)
     account = models.ForeignKey(SocialAccount)
-    token = models \
-        .TextField(verbose_name=_('token'),
-                   help_text=_('"oauth_token" (OAuth1) or access token'
-                               ' (OAuth2)'))
-    token_secret = models \
-        .TextField(blank=True,
-                   verbose_name=_('token secret'),
-                   help_text=_('"oauth_token_secret" (OAuth1) or refresh'
-                   ' token (OAuth2)'))
+    token = models.TextField(
+        verbose_name=_('token'),
+        help_text=_(
+            '"oauth_token" (OAuth1) or access token (OAuth2)'))
+    token_secret = models.TextField(
+        blank=True,
+        verbose_name=_('token secret'),
+        help_text=_(
+            '"oauth_token_secret" (OAuth1) or refresh token (OAuth2)'))
     expires_at = models.DateTimeField(blank=True, null=True,
                                       verbose_name=_('expires at'))
 
@@ -186,6 +196,7 @@ class SocialLogin(object):
         self.save(request, connect=True)
 
     def serialize(self):
+        serialize_instance = get_adapter().serialize_instance
         ret = dict(account=serialize_instance(self.account),
                    user=serialize_instance(self.user),
                    state=self.state,
@@ -197,6 +208,7 @@ class SocialLogin(object):
 
     @classmethod
     def deserialize(cls, data):
+        deserialize_instance = get_adapter().deserialize_instance
         account = deserialize_instance(SocialAccount, data['account'])
         user = deserialize_instance(get_user_model(), data['user'])
         if 'token' in data:

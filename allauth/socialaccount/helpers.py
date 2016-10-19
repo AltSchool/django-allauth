@@ -1,8 +1,6 @@
 from django.contrib import messages
-from django.contrib.auth import logout
-from django.shortcuts import render_to_response, render
+from django.shortcuts import render
 from django.http import HttpResponseRedirect
-from django.template import RequestContext
 from django.forms import ValidationError
 from django.core.urlresolvers import reverse
 
@@ -21,8 +19,9 @@ from .adapter import get_adapter
 
 
 def _process_signup(request, sociallogin):
-    auto_signup = get_adapter().is_auto_signup_allowed(request,
-                                                       sociallogin)
+    auto_signup = get_adapter(request).is_auto_signup_allowed(
+        request,
+        sociallogin)
     if not auto_signup:
         request.session['socialaccount_sociallogin'] = sociallogin.serialize()
         url = reverse('socialaccount_signup')
@@ -41,13 +40,17 @@ def _process_signup(request, sociallogin):
         # ("closed" rendering, create user, send email, in active
         # etc..)
         try:
-            if not get_adapter().is_open_for_signup(request,
-                                                    sociallogin):
-                return render(request,
-                              "account/signup_closed.html")
+            if not get_adapter(request).is_open_for_signup(
+                    request,
+                    sociallogin):
+                return render(
+                    request,
+                    "account/signup_closed." +
+                    account_settings.TEMPLATE_EXTENSION
+                )
         except ImmediateHttpResponse as e:
             return e.response
-        get_adapter().save_user(request, sociallogin, form=None)
+        get_adapter(request).save_user(request, sociallogin, form=None)
         ret = complete_social_signup(request, sociallogin)
     return ret
 
@@ -67,11 +70,12 @@ def render_authentication_error(request,
     try:
         if extra_context is None:
             extra_context = {}
-        get_adapter().authentication_error(request,
-                                           provider_id,
-                                           error=error,
-                                           exception=exception,
-                                           extra_context=extra_context)
+        get_adapter(request).authentication_error(
+            request,
+            provider_id,
+            error=error,
+            exception=exception,
+            extra_context=extra_context)
     except ImmediateHttpResponse as e:
         return e.response
     if error == AuthError.CANCELLED:
@@ -84,9 +88,12 @@ def render_authentication_error(request,
         }
     }
     context.update(extra_context)
-    return render_to_response(
-        "socialaccount/authentication_error.html",
-        context, context_instance=RequestContext(request))
+    return render(
+        request,
+        "socialaccount/authentication_error." +
+        account_settings.TEMPLATE_EXTENSION,
+        context
+    )
 
 
 def _add_social_account(request, sociallogin):
@@ -118,11 +125,11 @@ def _add_social_account(request, sociallogin):
                                               sociallogin=sociallogin)
         except ImmediateHttpResponse as e:
             return e.response
-    default_next = get_adapter() \
-        .get_connect_redirect_url(request,
-                                  sociallogin.account)
+    default_next = get_adapter(request).get_connect_redirect_url(
+        request,
+        sociallogin.account)
     next_url = sociallogin.get_redirect_url(request) or default_next
-    get_account_adapter().add_message(request, level, message)
+    get_account_adapter(request).add_message(request, level, message)
     return HttpResponseRedirect(next_url)
 
 
@@ -130,7 +137,7 @@ def complete_social_login(request, sociallogin):
     assert not sociallogin.is_existing
     sociallogin.lookup()
     try:
-        get_adapter().pre_social_login(request, sociallogin)
+        get_adapter(request).pre_social_login(request, sociallogin)
         signals.pre_social_login.send(sender=SocialLogin,
                                       request=request,
                                       sociallogin=sociallogin)
@@ -152,7 +159,7 @@ def _social_login_redirect(request, sociallogin):
 
 def _complete_social_login(request, sociallogin):
     if request.user.is_authenticated():
-        logout(request)
+        get_account_adapter().logout(request)
     if sociallogin.is_existing:
         # Login existing user
         ret = _login_social_account(request, sociallogin)

@@ -1,14 +1,75 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
+import json
 import requests
 from datetime import datetime, date
+from importlib import import_module
 
 import django
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase as DjangoTestCase
 from django.db import models
+from django.core.files.base import ContentFile
 
+from allauth.account.utils import user_username
 from . import utils
+from .compat import urlparse, urlunparse
+
+
+try:
+    from mock import Mock, patch
+except ImportError:
+    from unittest.mock import Mock, patch  # noqa
+
+
+class TestCase(DjangoTestCase):
+
+    def setUp(self):
+        if django.VERSION < (1, 8,):
+            engine = import_module(settings.SESSION_ENGINE)
+            s = engine.SessionStore()
+            s.save()
+            self.client.cookies[
+                settings.SESSION_COOKIE_NAME] = s.session_key
+
+    def assertRedirects(self, response, expected_url,
+                        fetch_redirect_response=True,
+                        **kwargs):
+        if django.VERSION >= (1, 7,):
+            super(TestCase, self).assertRedirects(
+                response,
+                expected_url,
+                fetch_redirect_response=fetch_redirect_response,
+                **kwargs)
+
+        elif fetch_redirect_response:
+            super(TestCase, self).assertRedirects(
+                response,
+                expected_url,
+                **kwargs)
+        else:
+            self.assertEqual(302, response.status_code)
+            actual_url = response['location']
+            if expected_url[0] == '/':
+                parts = list(urlparse(actual_url))
+                parts[0] = parts[1] = ''
+                actual_url = urlunparse(parts)
+            self.assertEqual(expected_url, actual_url)
+
+    def client_force_login(self, user):
+        if django.VERSION >= (1, 9):
+            self.client.force_login(
+                user,
+                'django.contrib.auth.backends.ModelBackend')
+        else:
+            old_password = user.password
+            user.set_password('doe')
+            user.save()
+            self.client.login(
+                username=user_username(user),
+                password='doe')
+            user.password = old_password
+            user.save()
 
 
 class MockedResponse(object):
@@ -21,7 +82,6 @@ class MockedResponse(object):
         self.headers = headers
 
     def json(self):
-        import json
         return json.loads(self.text)
 
     def raise_for_status(self):
@@ -81,24 +141,51 @@ class BasicTests(TestCase):
             self.assertEqual(None, utils.valid_email_or_none("Bad ?"))
 
     def test_serializer(self):
+
+        class SomeValue:
+            pass
+
+        some_value = SomeValue()
+
+        class SomeField(models.Field):
+            def get_prep_value(self, value):
+                return 'somevalue'
+
+            def from_db_value(self, value, expression, connection, context):
+                return some_value
+
         class SomeModel(models.Model):
             dt = models.DateTimeField()
             t = models.TimeField()
             d = models.DateField()
-            
+            img1 = models.ImageField()
+            img2 = models.ImageField()
+            img3 = models.ImageField()
+            something = SomeField()
+
         def method(self):
             pass
 
         instance = SomeModel(dt=datetime.now(),
                              d=date.today(),
+                             something=some_value,
                              t=datetime.now().time())
-        # make sure serializer doesn't fail if a method is attached to the instance
+        content_file = ContentFile(b'%PDF')
+        content_file.name = 'foo.pdf'
+        instance.img1 = content_file
+        instance.img2 = 'foo.png'
+        # make sure serializer doesn't fail if a method is attached to
+        # the instance
         instance.method = method
         instance.nonfield = 'hello'
         data = utils.serialize_instance(instance)
         instance2 = utils.deserialize_instance(SomeModel, data)
         self.assertEqual(getattr(instance, 'method', None), method)
         self.assertEqual(getattr(instance2, 'method', None), None)
+        self.assertEqual(instance2.something, some_value)
+        self.assertEqual(instance2.img1.name, 'foo.pdf')
+        self.assertEqual(instance2.img2.name, 'foo.png')
+        self.assertEqual(instance2.img3.name, '')
         self.assertEqual(instance.nonfield, instance2.nonfield)
         self.assertEqual(instance.d, instance2.d)
         self.assertEqual(instance.dt.date(), instance2.dt.date())
@@ -111,3 +198,29 @@ class BasicTests(TestCase):
             #     != datetime.time(10, 6, 28, 705000)
             self.assertEqual(int(t1.microsecond / 1000),
                              int(t2.microsecond / 1000))
+
+    def test_serializer_binary_field(self):
+        class SomeBinaryModel(models.Model):
+            bb = models.BinaryField()
+            bb_empty = models.BinaryField()
+
+        instance = SomeBinaryModel(bb=b'some binary data')
+
+        serialized = utils.serialize_instance(instance)
+        deserialized = utils.deserialize_instance(SomeBinaryModel, serialized)
+
+        self.assertEqual(serialized['bb'], 'c29tZSBiaW5hcnkgZGF0YQ==')
+        self.assertEqual(serialized['bb_empty'], '')
+        self.assertEqual(deserialized.bb, b'some binary data')
+        self.assertEqual(deserialized.bb_empty, b'')
+
+    def test_build_absolute_uri(self):
+        self.assertEqual(
+            utils.build_absolute_uri(None, '/foo'),
+            'http://example.com/foo')
+        self.assertEqual(
+            utils.build_absolute_uri(None, '/foo', protocol='ftp'),
+            'ftp://example.com/foo')
+        self.assertEqual(
+            utils.build_absolute_uri(None, 'http://foo.com/bar'),
+            'http://foo.com/bar')
