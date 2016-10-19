@@ -192,6 +192,10 @@ ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST (="")
   List of remote servers to which this server may forward OAuth2 token proxy
   redirects (see above).
 
+ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST (="")
+  List of remote servers to which this server may forward OAuth2 token proxy
+  redirects (see above).
+
 SOCIALACCOUNT_ADAPTER (="allauth.socialaccount.adapter.DefaultSocialAccountAdapter")
   Specifies the adapter class to use, allowing you to alter certain
   default behaviour.

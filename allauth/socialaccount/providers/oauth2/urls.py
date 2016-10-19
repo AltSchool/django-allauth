@@ -20,11 +20,12 @@ def default_urlpatterns(provider):
         app_settings.LOGIN_PROXY_REDIRECT_WHITELIST or
         app_settings.LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST
     ):
-        urlpatterns += patterns('',
+        urlpatterns.append(
             url('^login/callback/proxy/$',
                 proxy_login_callback,
                 {'callback_view_name': provider.id + '_callback'},
-                name=provider.id + '_proxy')
+                name=provider.id + '_proxy'
+            )
         )
 
     return [url('^' + provider.get_slug() + '/', include(urlpatterns))]

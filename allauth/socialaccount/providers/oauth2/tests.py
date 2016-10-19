@@ -52,6 +52,7 @@ class OAuth2Tests(TestCase):
                                        key=FakeOAuth2Adapter.provider_id,
                                        secret='dummy')
         app.sites.add(get_current_site())
+        super(OAuth2Tests, self).setUp()
 
 
 class OAuth2TestsNoProxying(OAuth2Tests):
@@ -109,7 +110,10 @@ class OAuth2TestsIsProxy(OAuth2Tests):
         super(OAuth2TestsIsProxy, self).setUp()
         self.reload_urls()
 
-    @override_settings(ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST='')
+    @override_settings(
+        ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST='',
+        ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST='',
+    )
     def tearDown(self):
         super(OAuth2TestsIsProxy, self).tearDown()
         self.reload_urls()

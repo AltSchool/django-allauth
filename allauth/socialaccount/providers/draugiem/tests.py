@@ -70,11 +70,12 @@ class DraugiemTests(TestCase):
         params and a random string
         """
         session = self.client.session
-        session['socialaccount_state'] = ({
+        session['socialaccount_state'] = {
             'process': 'login',
             'scope': '',
-            'auth_params': ''
-        }, '12345')
+            'auth_params': '',
+            'verifier': '12345',
+        }
         session.save()
 
     def test_login_redirect(self):

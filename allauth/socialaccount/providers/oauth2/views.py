@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.utils import timezone
 
+from allauth.account import app_settings
 from allauth.exceptions import ImmediateHttpResponse
 from allauth.utils import build_absolute_uri
 from allauth.socialaccount.helpers import render_authentication_error
@@ -156,6 +157,10 @@ def target_in_whitelist(parsed_target):
         if target_loc == allowed_loc and target_scheme == allowed_scheme:
             return True
     for allowed in app_settings.LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST:
+        if '//' not in allowed:
+            # Without a scheme, urlparse will recognize the input as a path and
+            # not a netloc.
+            allowed = '//%s' % allowed
         parsed_allowed = urlparse(allowed)
         allowed_loc = parsed_allowed.netloc
         if target_loc.endswith(allowed_loc):
