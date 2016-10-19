@@ -296,6 +296,10 @@ ACCOUNT_SESSION_COOKIE_AGE (=1814400)
   How long before the session cookie expires in seconds.  Defaults to 1814400 seconds,
   or 3 weeks.
 
+ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST (="")
+  List of remote servers to which this server may forward OAuth2 token proxy
+  redirects (see above).
+
 SOCIALACCOUNT_ADAPTER (="allauth.socialaccount.adapter.DefaultSocialAccountAdapter")
   Specifies the adapter class to use, allowing you to alter certain
   default behaviour.
