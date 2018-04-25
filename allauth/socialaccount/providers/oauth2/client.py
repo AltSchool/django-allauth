@@ -1,9 +1,8 @@
-try:
-    from urllib.parse import parse_qsl, urlencode
-except ImportError:
-    from urllib import urlencode
-    from urlparse import parse_qsl
 import requests
+
+from django.utils.http import urlencode
+
+from allauth.compat import parse_qsl
 
 
 class OAuth2Error(Exception):
@@ -28,7 +27,7 @@ class OAuth2Client(object):
         self.consumer_secret = consumer_secret
         self.scope = scope_delimiter.join(set(scope))
         self.state = None
-        self.headers = None
+        self.headers = headers
         self.basic_auth = basic_auth
 
     def get_redirect_url(self, authorization_url, extra_params):
