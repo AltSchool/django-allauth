@@ -1,24 +1,33 @@
 from __future__ import absolute_import
 
 from datetime import timedelta
+
 from urlparse import urljoin
 from urlparse import urlparse
 
+from requests import RequestException
+
+
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
+from django.urls import reverse
 from django.utils import timezone
 
 from allauth.account import app_settings
 from allauth.exceptions import ImmediateHttpResponse
-from allauth.utils import build_absolute_uri
-from allauth.socialaccount.helpers import render_authentication_error
 from allauth.socialaccount import providers
-from allauth.socialaccount.providers.oauth2.client import (OAuth2Client,
-                                                           OAuth2Error)
-from allauth.socialaccount.helpers import complete_social_login
-from allauth.socialaccount.models import SocialToken, SocialLogin
-from allauth.utils import get_request_param
+from allauth.socialaccount.helpers import (
+    complete_social_login,
+    render_authentication_error,
+)
+from allauth.socialaccount.models import SocialLogin, SocialToken
+from allauth.socialaccount.providers.base import ProviderException
+from allauth.socialaccount.providers.oauth2.client import (
+    OAuth2Client,
+    OAuth2Error,
+)
+from allauth.utils import build_absolute_uri, get_request_param
+
 from ..base import AuthAction, AuthError
 
 
@@ -46,6 +55,11 @@ class OAuth2Adapter(object):
         Returns a SocialLogin instance
         """
         raise NotImplementedError
+
+    def get_callback_url(self, request, app):
+        callback_url = reverse(self.provider_id + "_callback")
+        protocol = self.redirect_uri_protocol
+        return build_absolute_uri(request, callback_url, protocol)
 
     def parse_token(self, data):
         token = SocialToken(token=data['access_token'])
@@ -93,7 +107,7 @@ class OAuth2View(object):
 
 
 class OAuth2LoginView(OAuth2View):
-    def dispatch(self, request):
+    def dispatch(self, request, *args, **kwargs):
         provider = self.adapter.get_provider()
         app = provider.get_app(self.request)
         client = self.get_client(request, app)
@@ -112,7 +126,7 @@ class OAuth2LoginView(OAuth2View):
 
 
 class OAuth2CallbackView(OAuth2View):
-    def dispatch(self, request):
+    def dispatch(self, request, *args, **kwargs):
         if 'error' in request.GET or 'code' not in request.GET:
             # Distinguish cancel from error
             auth_error = request.GET.get('error', None)
@@ -140,7 +154,10 @@ class OAuth2CallbackView(OAuth2View):
             else:
                 login.state = SocialLogin.unstash_state(request)
             return complete_social_login(request, login)
-        except (PermissionDenied, OAuth2Error) as e:
+        except (PermissionDenied,
+                OAuth2Error,
+                RequestException,
+                ProviderException) as e:
             return render_authentication_error(
                 request,
                 self.adapter.provider_id,

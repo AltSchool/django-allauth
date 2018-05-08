@@ -13,18 +13,26 @@ Resources:
     https://us.battle.net/en/forum/15051532/
 """
 import requests
+
 from allauth.socialaccount.providers.oauth2.client import OAuth2Error
 from allauth.socialaccount.providers.oauth2.views import (
-    OAuth2Adapter, OAuth2CallbackView, OAuth2LoginView
+    OAuth2Adapter,
+    OAuth2CallbackView,
+    OAuth2LoginView,
 )
+
 from .provider import BattleNetProvider
 
 
-def _check_errors(data):
-    # The expected output from the Battle.net API follows this format:
-    # {"id": 12345, "battletag": "Example#12345"}
-    # The battletag is optional.
-    if "error" in data:
+def _check_errors(response):
+    try:
+        data = response.json()
+    except ValueError:  # JSONDecodeError on py3
+        raise OAuth2Error(
+            "Invalid JSON from Battle.net API: %r" % (response.text)
+        )
+
+    if response.status_code >= 400 or "error" in data:
         # For errors, we expect the following format:
         # {"error": "error_name", "error_description": "Oops!"}
         # For example, if the token is not valid, we will get:
@@ -32,12 +40,21 @@ def _check_errors(data):
         #   "error": "invalid_token",
         #   "error_description": "Invalid access token: abcdef123456"
         # }
-        error = data["error"]
-        desc = data.get("error_description", "")
+        # For the profile API, this may also look like the following:
+        # {"code": 403, "type": "Forbidden", "detail": "Account Inactive"}
+        error = data.get("error", "") or data.get("type", "")
+        desc = data.get("error_description", "") or data.get("detail", "")
+
         raise OAuth2Error("Battle.net error: %s (%s)" % (error, desc))
-    elif "id" not in data:
+
+    # The expected output from the API follows this format:
+    # {"id": 12345, "battletag": "Example#12345"}
+    # The battletag is optional.
+    if "id" not in data:
         # If the id is not present, the output is not usable (no UID)
         raise OAuth2Error("Invalid data from Battle.net API: %r" % (data))
+
+    return data
 
 
 class BattleNetOAuth2Adapter(OAuth2Adapter):
@@ -45,24 +62,34 @@ class BattleNetOAuth2Adapter(OAuth2Adapter):
     OAuth2 adapter for Battle.net
     https://dev.battle.net/docs/read/oauth
 
-    Region is set to us by default.
-    Set the `battlenet_region` attribute to change it.
+    Region is set to us by default, but can be overridden with the
+    `region` GET parameter when performing a login.
     Can be any of eu, us, kr, sea, tw or cn
     """
     provider_id = BattleNetProvider.id
-    battlenet_region = "us"
+    valid_regions = ("us", "eu", "kr", "sea", "tw", "cn")
+
+    @property
+    def battlenet_region(self):
+        region = self.request.GET.get("region", "").lower()
+        if region == "sea":
+            # South-East Asia uses the same region as US everywhere
+            return "us"
+        if region in self.valid_regions:
+            return region
+        return "us"
 
     @property
     def battlenet_base_url(self):
         region = self.battlenet_region
         if region == "cn":
             return "https://www.battlenet.com.cn"
-        return "https://%s.battle.net" % ("us" if region == "sea" else region)
+        return "https://%s.battle.net" % (region)
 
     @property
     def battlenet_api_url(self):
         if self.battlenet_region == "cn":
-            return "https://www.battlenet.com.cn/api"
+            return "https://api.battlenet.com.cn"
         return "https://%s.api.battle.net" % (self.battlenet_region)
 
     @property
@@ -80,13 +107,21 @@ class BattleNetOAuth2Adapter(OAuth2Adapter):
     def complete_login(self, request, app, token, **kwargs):
         params = {"access_token": token.token}
         response = requests.get(self.profile_url, params=params)
-        data = response.json()
-        _check_errors(data)
+        data = _check_errors(response)
 
         # Add the region to the data so that we can have it in `extra_data`.
         data["region"] = self.battlenet_region
 
         return self.get_provider().sociallogin_from_response(request, data)
+
+    def get_callback_url(self, request, app):
+        r = super(BattleNetOAuth2Adapter, self).get_callback_url(request, app)
+        region = request.GET.get("region", "").lower()
+        # Pass the region down to the callback URL if we specified it
+        if region and region in self.valid_regions:
+            r += "?region=%s" % (region)
+        return r
+
 
 oauth2_login = OAuth2LoginView.adapter_view(BattleNetOAuth2Adapter)
 oauth2_callback = OAuth2CallbackView.adapter_view(BattleNetOAuth2Adapter)
