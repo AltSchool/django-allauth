@@ -118,6 +118,7 @@ INSTALLED_APPS = (
     'allauth.socialaccount.providers.soundcloud',
     'allauth.socialaccount.providers.spotify',
     'allauth.socialaccount.providers.stackexchange',
+    'allauth.socialaccount.providers.steam',
     'allauth.socialaccount.providers.stripe',
     'allauth.socialaccount.providers.telegram',
     'allauth.socialaccount.providers.trello',
