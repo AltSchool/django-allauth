@@ -9,13 +9,13 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.utils.crypto import get_random_string
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext_lazy as _
 
 import allauth.app_settings
 from allauth.account.models import EmailAddress
 from allauth.account.utils import get_next_redirect_url, setup_user_email
 from allauth.utils import get_user_model, build_absolute_uri
-from allauth.compat import python_2_unicode_compatible
+from allauth.compat import python_2_unicode_compatible, ugettext_lazy as _
+
 
 from ..utils import get_request_param
 from . import app_settings, providers
