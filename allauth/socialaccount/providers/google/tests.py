@@ -220,3 +220,20 @@ class GoogleTests(OAuth2TestsMixin, TestCase):
 
         client = androidCallback.get_client(androidCallback.request, app)
         self.assertEqual("", client.callback_url)
+
+@override_settings(
+    SOCIALACCOUNT_PROVIDERS={
+        'google': {
+            'APP': {
+                'client_id': 'app123id',
+                'key': 'google',
+                'secret': 'dummy'
+            }
+        }
+    }
+)
+class AppInSettingsTests(GoogleTests):
+    """
+    Run the same set of tests but without having a SocialApp entry.
+    """
+    pass
