@@ -32,6 +32,20 @@ from requests.exceptions import HTTPError
 
 from .views import OAuth2Adapter, OAuth2LoginView, proxy_login_callback, MissingParameter
 
+def get_current_site(request=None):
+    """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
+    by request in Django >= 1.8.
+    :param request: optional request object
+    :type request: :class:`django.http.HttpRequest`
+    """
+    # >= django 1.8
+    if request and hasattr(Site.objects, '_get_site_by_request'):
+        site = Site.objects.get_current(request=request)
+    else:
+        site = Site.objects.get_current()
+
+    return site
+
 
 def get_current_site(request=None):
     """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
