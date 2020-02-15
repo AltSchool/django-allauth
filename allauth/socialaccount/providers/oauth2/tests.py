@@ -14,6 +14,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.utils.http import urlquote_plus as urlquote, urlunquote_plus as urlunquote
+from django.utils import six
 
 try:
     from importlib import import_module
@@ -116,7 +117,7 @@ class OAuth2TestsIsProxy(OAuth2Tests):
     def reload_urls(self):
         for module in sys.modules:
             if module.endswith('urls'):
-                reload(sys.modules[module])
+                six.moves.reload_module(sys.modules[module])
         clear_url_caches()
 
 
