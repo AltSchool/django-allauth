@@ -2,8 +2,7 @@ from __future__ import absolute_import
 
 from datetime import timedelta
 
-from urlparse import urljoin
-from urlparse import urlparse
+from allauth.compat import urlparse, urljoin
 
 from requests import RequestException
 

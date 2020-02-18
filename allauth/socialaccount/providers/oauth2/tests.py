@@ -6,13 +6,15 @@ import json, re, sys
 
 from django.conf import settings
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import reverse, NoReverseMatch, clear_url_caches, set_urlconf
+from django.urls import reverse, NoReverseMatch, clear_url_caches, set_urlconf
 from django.http import HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.utils.http import urlquote_plus as urlquote, urlunquote_plus as urlunquote
+from django.utils import six
 
 try:
     from importlib import import_module
@@ -25,11 +27,24 @@ from allauth.socialaccount.providers import registry
 from allauth.socialaccount.providers.fake.views import FakeOAuth2Adapter
 from allauth.socialaccount.tests import create_oauth2_tests
 from allauth.tests import MockedResponse
-from allauth.utils import get_current_site
 
 from requests.exceptions import HTTPError
 
 from .views import OAuth2Adapter, OAuth2LoginView, proxy_login_callback, MissingParameter
+
+def get_current_site(request=None):
+    """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
+    by request in Django >= 1.8.
+    :param request: optional request object
+    :type request: :class:`django.http.HttpRequest`
+    """
+    # >= django 1.8
+    if request and hasattr(Site.objects, '_get_site_by_request'):
+        site = Site.objects.get_current(request=request)
+    else:
+        site = Site.objects.get_current()
+
+    return site
 
 
 class OAuth2Tests(TestCase):
@@ -102,7 +117,7 @@ class OAuth2TestsIsProxy(OAuth2Tests):
     def reload_urls(self):
         for module in sys.modules:
             if module.endswith('urls'):
-                reload(sys.modules[module])
+                six.moves.reload_module(sys.modules[module])
         clear_url_caches()
 
 
