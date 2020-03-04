@@ -83,7 +83,7 @@ class OAuth2View(object):
 
     def get_client(self, request, app):
         if app_settings.LOGIN_CALLBACK_PROXY:
-            callback_url = reverse(self.adapter.provider_id + "_callback")
+            callback_url = reverse(self.adapter.provider_id + '_callback')
             callback_url = urljoin(app_settings.LOGIN_CALLBACK_PROXY, callback_url)
             callback_url = '%s/proxy/' % callback_url.rstrip('/')
         else:

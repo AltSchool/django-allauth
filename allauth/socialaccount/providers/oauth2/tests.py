@@ -14,7 +14,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
 from django.utils.http import urlquote_plus as urlquote, urlunquote_plus as urlunquote
-from imp import reload
+from importlib import reload
 
 try:
     from importlib import import_module
@@ -109,7 +109,7 @@ class OAuth2TestsUsesProxy(OAuth2Tests):
 
 @override_settings(
     ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST=(
-        'https://cheshirecat,https://tweedledee,',
+        'https://cheshirecat,https://tweedledee,'
     ),
     ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST='sub.domain.com,'
 )

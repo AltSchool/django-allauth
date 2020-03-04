@@ -87,7 +87,6 @@ INSTALLED_APPS = (
     'allauth.socialaccount.providers.fake',
     'allauth.socialaccount.providers.feedly',
     'allauth.socialaccount.providers.fivehundredpx',
-    'allauth.socialaccount.providers.fake',
     'allauth.socialaccount.providers.flickr',
     'allauth.socialaccount.providers.foursquare',
     'allauth.socialaccount.providers.fxa',
