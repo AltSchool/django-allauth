@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import json, re, sys
+from urllib.parse import parse_qs, urlparse
 
 from django.conf import settings
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -50,11 +51,9 @@ def get_current_site(request=None):
 class OAuth2Tests(TestCase):
     def param(self, param, url):
         # Look for a redirect uri
-        url = urlunquote(url)
-        m = re.match('.*%s=(.*?)[|&.*]' % param, url)
-        if m is None:
-            return ''
-        return m.group(1)
+        parsed_url = urlparse(urlunquote(url))
+        queries = parse_qs(parsed_url.query)
+        return queries.get(param, ['']).pop()
 
     def init_request(self, endpoint, params):
         self.request = RequestFactory().get(reverse(endpoint), params)
@@ -79,8 +78,10 @@ class OAuth2TestsNoProxying(OAuth2Tests):
         login_view = OAuth2LoginView.adapter_view(FakeOAuth2Adapter)
         login_response = login_view(self.request)
         self.assertEqual(login_response.status_code, 302)  # Redirect
-        self.assertEqual(self.param('redirect_uri', login_response['location']),
-                         'http://testserver/fake/login/callback/')
+        self.assertEqual(
+            self.param('redirect_uri', login_response['location']),
+            'http://testserver/fake/login/callback/',
+        )
 
     def test_is_not_login_proxy(self):
         with self.assertRaises(NoReverseMatch):
@@ -97,8 +98,10 @@ class OAuth2TestsUsesProxy(OAuth2Tests):
         login_view = OAuth2LoginView.adapter_view(FakeOAuth2Adapter)
         login_response = login_view(self.request)
         self.assertEqual(login_response.status_code, 302)  # Redirect
-        self.assertEqual(self.param('redirect_uri', login_response['location']),
-                         'https://loginproxy/fake/login/callback/proxy/')
+        self.assertEqual(
+            self.param('redirect_uri', login_response['location']),
+            'https://loginproxy/fake/login/callback/proxy/'
+        )
         state = json.loads(self.param('state', login_response['location']))
         self.assertEqual(state['host'], 'http://testserver/fake/login/')
 
