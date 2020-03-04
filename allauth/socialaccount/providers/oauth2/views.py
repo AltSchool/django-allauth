@@ -6,10 +6,11 @@ from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils import timezone
+from urllib.parse import urljoin, urlparse
 from requests import RequestException
 
+
 from allauth.account import app_settings
-from allauth.compat import urlparse, urljoin
 from allauth.exceptions import ImmediateHttpResponse
 from allauth.socialaccount import providers
 from allauth.socialaccount.helpers import (
