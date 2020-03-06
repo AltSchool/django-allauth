@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+
 import json
 
 from django.contrib.auth import authenticate
@@ -14,10 +15,10 @@ import allauth.app_settings
 from allauth.account.models import EmailAddress
 from allauth.account.utils import get_next_redirect_url, setup_user_email
 from allauth.utils import (
+    build_absolute_uri,
+    deserialize_instance,
     get_user_model,
     serialize_instance,
-    deserialize_instance,
-    build_absolute_uri,
 )
 
 from ..utils import get_request_param

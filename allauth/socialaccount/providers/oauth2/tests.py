@@ -1,34 +1,27 @@
 # -*- coding: utf-8 -*-
-from __future__ import (
-    absolute_import,
-    unicode_literals,
-)
+from __future__ import absolute_import, unicode_literals
 
 import json
-import re
 import sys
-from urllib.parse import (
-    parse_qs,
-    urlparse,
-)
+from importlib import reload
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied
-from django.urls import reverse, NoReverseMatch, clear_url_caches
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
+from django.urls import NoReverseMatch, clear_url_caches, reverse
 from django.utils.http import (
     urlquote_plus as urlquote,
     urlunquote_plus as urlunquote,
 )
-from importlib import reload
 
 from allauth.socialaccount.models import SocialApp
 from allauth.socialaccount.providers.fake.views import FakeOAuth2Adapter
 
-from .views import OAuth2LoginView, proxy_login_callback, MissingParameter
+from .views import MissingParameter, OAuth2LoginView, proxy_login_callback
 
 
 class OAuth2TestMixin(object):
@@ -153,8 +146,10 @@ class OAuth2TestsIsProxy(OAuth2TestMixin, TestCase):
         self.assertEqual(proxy_response.status_code, 302)  # Redirect
         self.assertEqual(
             proxy_response['location'],
-            ('https://tweedledee/fake/login/callback/'
-            '?process=login&state=%s' % urlquote(serialized_state)))
+            (
+                'https://tweedledee/fake/login/callback/'
+                '?process=login&state=%s' % urlquote(serialized_state))
+            )
 
     def tests_redirects_request_with_domain_whitelisted_host(self):
         state = {'host': 'https://foo.sub.domain.com'}
@@ -170,8 +165,10 @@ class OAuth2TestsIsProxy(OAuth2TestMixin, TestCase):
         self.assertEqual(proxy_response.status_code, 302)  # Redirect
         self.assertEqual(
             proxy_response['location'],
-            ('https://foo.sub.domain.com/fake/login/callback/'
-            '?process=login&state=%s' % urlquote(serialized_state)))
+            (
+                'https://foo.sub.domain.com/fake/login/callback/'
+                '?process=login&state=%s' % urlquote(serialized_state))
+            )
 
     def test_rejects_request_with_scheme_mismatch(self):
         state = {'host': 'ftp://tweedledee'}

@@ -1,9 +1,9 @@
 from django.urls import include, path
 
-from allauth.utils import import_attribute
-
 from allauth.account import app_settings
 from allauth.socialaccount.providers.oauth2.views import proxy_login_callback
+from allauth.utils import import_attribute
+
 
 def default_urlpatterns(provider, additional_paths=[]):
     login_view = import_attribute(
