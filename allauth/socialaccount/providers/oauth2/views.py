@@ -53,11 +53,6 @@ class OAuth2Adapter(object):
         """
         raise NotImplementedError
 
-    def get_callback_url(self, request, app):
-        callback_url = reverse(self.provider_id + "_callback")
-        protocol = self.redirect_uri_protocol
-        return build_absolute_uri(request, callback_url, protocol)
-
     def parse_token(self, data):
         token = SocialToken(token=data['access_token'])
         token.token_secret = data.get('refresh_token', '')
@@ -87,7 +82,11 @@ class OAuth2View(object):
             callback_url = urljoin(app_settings.LOGIN_CALLBACK_PROXY, callback_url)
             callback_url = '%s/proxy/' % callback_url.rstrip('/')
         else:
-            callback_url = self.adapter.get_callback_url(request, app)
+            callback_url = build_absolute_uri(
+                request,
+                reverse(self.adapter.provider_id + "_callback"),
+                protocol=self.adapter.redirect_uri_protocol,
+            )
 
         provider = self.adapter.get_provider()
         scope = provider.get_scope(request)
@@ -112,8 +111,9 @@ class OAuth2LoginView(OAuth2View):
         auth_params = provider.get_auth_params(request, action)
         client.state = SocialLogin.stash_state(request)
         try:
-            return HttpResponseRedirect(client.get_redirect_url(
-                auth_url, auth_params))
+            return HttpResponseRedirect(
+                client.get_redirect_url(auth_url, auth_params)
+            )
         except OAuth2Error as e:
             return render_authentication_error(
                 request,

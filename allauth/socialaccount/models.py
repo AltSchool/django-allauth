@@ -1,8 +1,6 @@
 from __future__ import absolute_import
 import json
 
-import json
-
 from django.contrib.auth import authenticate
 from django.contrib.sites.models import Site
 from django.contrib.sites.shortcuts import get_current_site

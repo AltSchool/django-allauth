@@ -108,6 +108,7 @@ INSTALLED_APPS = (
     'allauth.socialaccount.providers.naver',
     'allauth.socialaccount.providers.nextcloud',
     'allauth.socialaccount.providers.odnoklassniki',
+    'allauth.socialaccount.providers.oauth2',
     'allauth.socialaccount.providers.openid',
     'allauth.socialaccount.providers.openstreetmap',
     'allauth.socialaccount.providers.orcid',
