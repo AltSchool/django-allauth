@@ -2,6 +2,7 @@ from __future__ import absolute_import
 
 from datetime import timedelta
 from requests import RequestException
+from urllib.parse import urljoin, urlparse
 
 
 from django.core.exceptions import PermissionDenied

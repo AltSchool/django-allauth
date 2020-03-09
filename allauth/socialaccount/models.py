@@ -20,7 +20,6 @@ from allauth.compat import (
 from allauth.utils import (
     build_absolute_uri,
     deserialize_instance,
-    get_current_site,
     get_user_model,
     serialize_instance,
 )
