@@ -22,6 +22,7 @@ except ImportError:
     from django.utils.importlib import import_module
 
 from allauth.account import app_settings as account_settings
+from allauth.compat import parse_qs, urlparse
 from allauth.socialaccount.models import SocialApp
 from allauth.socialaccount.providers import registry
 from allauth.socialaccount.providers.fake.views import FakeOAuth2Adapter
@@ -32,67 +33,35 @@ from requests.exceptions import HTTPError
 
 from .views import OAuth2Adapter, OAuth2LoginView, proxy_login_callback, MissingParameter
 
-def get_current_site(request=None):
-    """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
-    by request in Django >= 1.8.
-    :param request: optional request object
-    :type request: :class:`django.http.HttpRequest`
-    """
-    # >= django 1.8
-    if request and hasattr(Site.objects, '_get_site_by_request'):
-        site = Site.objects.get_current(request=request)
-    else:
-        site = Site.objects.get_current()
-
-    return site
-
-
-def get_current_site(request=None):
-    """Wrapper around ``Site.objects.get_current`` to handle ``Site`` lookups
-    by request in Django >= 1.8.
-    :param request: optional request object
-    :type request: :class:`django.http.HttpRequest`
-    """
-    # >= django 1.8
-    if request and hasattr(Site.objects, '_get_site_by_request'):
-        site = Site.objects.get_current(request=request)
-    else:
-        site = Site.objects.get_current()
-
-    return site
-
-
-class OAuth2Tests(TestCase):
+class OAuth2TestsMixin(object):
     def param(self, param, url):
         # Look for a redirect uri
-        url = urlunquote(url)
-        m = re.match('.*%s=(.*?)[|&.*]' % param, url)
-        if m is None:
-            return ''
-        return m.group(1)
+        parsed_url = urlparse(urlunquote(url))
+        queries = parse_qs(parsed_url.query)
+        return queries.get(param, ['']).pop()
 
     def init_request(self, endpoint, params):
-        self.request = RequestFactory().get(reverse(endpoint), params)
-        SessionMiddleware().process_request(self.request)
+        request = RequestFactory().get(reverse(endpoint), params)
+        SessionMiddleware().process_request(request)
+        return request
 
     def setUp(self):
-        app = SocialApp.objects.create(provider=FakeOAuth2Adapter.provider_id,
-                                       name=FakeOAuth2Adapter.provider_id,
-                                       client_id='app123id',
-                                       key=FakeOAuth2Adapter.provider_id,
-                                       secret='dummy')
-        app.sites.add(get_current_site())
-        super(OAuth2Tests, self).setUp()
+        app = SocialApp.objects.create(
+            provider=FakeOAuth2Adapter.provider_id,
+            name=FakeOAuth2Adapter.provider_id,
+            client_id='app123id',
+            key=FakeOAuth2Adapter.provider_id,
+            secret='dummy',
+        )
+        app.sites.add(Site.objects.get_current())
+        super(OAuth2TestsMixin, self).setUp()
 
 
-class OAuth2TestsNoProxying(OAuth2Tests):
-    def setUp(self):
-        self.init_request('fake_login', dict(process='login'))
-        super(OAuth2TestsNoProxying, self).setUp()
-
+class OAuth2TestsNoProxying(OAuth2TestsMixin, TestCase):
     def test_proxyless_login(self):
+        request = self.init_request('fake_login', dict(process='login'))
         login_view = OAuth2LoginView.adapter_view(FakeOAuth2Adapter)
-        login_response = login_view(self.request)
+        login_response = login_view(request)
         self.assertEqual(login_response.status_code, 302)  # Redirect
         self.assertEqual(self.param('redirect_uri', login_response['location']),
                          'http://testserver/fake/login/callback/')
@@ -103,17 +72,16 @@ class OAuth2TestsNoProxying(OAuth2Tests):
 
 
 @override_settings(ACCOUNT_LOGIN_CALLBACK_PROXY='https://loginproxy')
-class OAuth2TestsUsesProxy(OAuth2Tests):
-    def setUp(self):
-        self.init_request('fake_login', dict(process='login'))
-        super(OAuth2TestsUsesProxy, self).setUp()
-
+class OAuth2TestsUsesProxy(OAuth2TestsMixin, TestCase):
     def test_login_by_proxy(self):
+        request = self.init_request('fake_login', dict(process='login'))
         login_view = OAuth2LoginView.adapter_view(FakeOAuth2Adapter)
-        login_response = login_view(self.request)
+        login_response = login_view(request)
         self.assertEqual(login_response.status_code, 302)  # Redirect
-        self.assertEqual(self.param('redirect_uri', login_response['location']),
-                         'https://loginproxy/fake/login/callback/proxy/')
+        self.assertEqual(
+            self.param('redirect_uri', login_response['location']),
+            'https://loginproxy/fake/login/callback/proxy/'
+        )
         state = json.loads(self.param('state', login_response['location']))
         self.assertEqual(state['host'], 'http://testserver/fake/login/')
 
@@ -128,13 +96,12 @@ class OAuth2TestsUsesProxy(OAuth2Tests):
     ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST=
     'sub.domain.com,'
 )
-class OAuth2TestsIsProxy(OAuth2Tests):
+class OAuth2TestsIsProxy(OAuth2TestsMixin, TestCase):
     def reload_urls(self):
         for module in sys.modules:
             if module.endswith('urls'):
                 six.moves.reload_module(sys.modules[module])
         clear_url_caches()
-
 
     def setUp(self):
         super(OAuth2TestsIsProxy, self).setUp()
@@ -145,64 +112,80 @@ class OAuth2TestsIsProxy(OAuth2Tests):
         ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST='',
     )
     def tearDown(self):
-        super(OAuth2TestsIsProxy, self).tearDown()
         self.reload_urls()
+        super(OAuth2TestsIsProxy, self).tearDown()
 
     def tests_is_login_proxy(self):
-        reverse('fake_proxy')
+        self.assertIsNotNone(reverse('fake_proxy'))
 
     def test_rejects_request_with_no_host_in_state(self):
-        self.init_request('fake_proxy', dict(process='login'))
+        request = self.init_request('fake_proxy', dict(process='login'))
         with self.assertRaises(MissingParameter):
-            proxy_login_callback(
-                self.request, callback_view_name='fake_callback')
+            proxy_login_callback(request, callback_view_name='fake_callback')
 
     def test_rejects_request_with_unwhitelisted_host(self):
         state = {'host': 'https://bar.domain.com'}
-        self.init_request(
+        request = self.init_request(
             'fake_proxy', dict(process='login', state=json.dumps(state)))
         with self.assertRaises(PermissionDenied):
-            proxy_login_callback(
-                self.request, callback_view_name='fake_callback')
+            proxy_login_callback(request, callback_view_name='fake_callback')
 
     def tests_redirects_request_with_whitelisted_host(self):
         state = {'host': 'https://tweedledee'}
         serialized_state = json.dumps(state)
-        self.init_request(
-            'fake_proxy', dict(process='login', state=serialized_state))
+        request = self.init_request(
+            'fake_proxy',
+            dict(process='login', state=serialized_state)
+        )
         proxy_response = proxy_login_callback(
-            self.request, callback_view_name='fake_callback')
+            request,
+            callback_view_name='fake_callback',
+        )
         self.assertEqual(proxy_response.status_code, 302)  # Redirect
-        self.assertEqual(
-            proxy_response['location'],
-            ('https://tweedledee/fake/login/callback/'
-            '?process=login&state=%s' % urlquote(serialized_state)))
+        expected_url = 'https://tweedledee/fake/login/callback/'
+        actual_url = proxy_response['location']
+        self.assertTrue(actual_url.startswith(expected_url))
+        self.assertEqual(self.param('process', actual_url), 'login')
+        self.assertEqual(json.loads(self.param('state', actual_url)), state)
 
     def tests_redirects_request_with_domain_whitelisted_host(self):
         state = {'host': 'https://foo.sub.domain.com'}
         serialized_state = json.dumps(state)
-        self.init_request(
-            'fake_proxy', dict(process='login', state=serialized_state))
+        request = self.init_request(
+            'fake_proxy',
+            dict(process='login', state=serialized_state),
+        )
         proxy_response = proxy_login_callback(
-            self.request, callback_view_name='fake_callback')
+            request,
+            callback_view_name='fake_callback',
+        )
         self.assertEqual(proxy_response.status_code, 302)  # Redirect
-        self.assertEqual(
-            proxy_response['location'],
-            ('https://foo.sub.domain.com/fake/login/callback/'
-            '?process=login&state=%s' % urlquote(serialized_state)))
+        expected_url = 'https://foo.sub.domain.com/fake/login/callback/'
+        actual_url = proxy_response['location']
+        self.assertTrue(actual_url.startswith(expected_url))
+        self.assertEqual(self.param('process', actual_url), 'login')
+        self.assertEqual(json.loads(self.param('state', actual_url)), state)
 
     def test_rejects_request_with_scheme_mismatch(self):
         state = {'host': 'ftp://tweedledee'}
-        self.init_request(
-            'fake_proxy', dict(process='login', state=json.dumps(state)))
+        request = self.init_request(
+            'fake_proxy',
+            dict(process='login', state=json.dumps(state)),
+        )
         with self.assertRaises(PermissionDenied):
             proxy_login_callback(
-                self.request, callback_view_name='fake_callback')
+                request,
+                callback_view_name='fake_callback',
+            )
 
     def test_rejects_request_with_whitelisted_prefix(self):
         state = {'host': 'https://tweedledee.creds4u.biz'}
-        self.init_request(
-            'fake_proxy', dict(process='login', state=json.dumps(state)))
+        request = self.init_request(
+            'fake_proxy',
+            dict(process='login', state=json.dumps(state))
+        )
         with self.assertRaises(PermissionDenied):
             proxy_login_callback(
-                self.request, callback_view_name='fake_callback')
+                request,
+                callback_view_name='fake_callback',
+            )

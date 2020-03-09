@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 from datetime import timedelta
 from requests import RequestException
-from urllib.parse import urljoin, urlparse
 
 
 from django.core.exceptions import PermissionDenied
@@ -56,7 +55,9 @@ class OAuth2Adapter(object):
 
     def get_callback_url(self, request, app):
         callback_url = reverse(self.provider_id + "_callback")
-        protocol = self.redirect_uri_protocol
+        protocol = (
+            self.redirect_uri_protocol or app_settings.DEFAULT_HTTP_PROTOCOL
+        )
         return build_absolute_uri(request, callback_url, protocol)
 
     def parse_token(self, data):
