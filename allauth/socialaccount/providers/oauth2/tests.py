@@ -1,37 +1,25 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from __future__ import absolute_import, unicode_literals
 
-import json, re, sys
+import json
+import sys
 
-from django.conf import settings
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied
-from django.urls import reverse, NoReverseMatch, clear_url_caches, set_urlconf
-from django.http import HttpResponse
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.test.utils import override_settings
-from django.utils.http import urlquote_plus as urlquote, urlunquote_plus as urlunquote
+from django.urls import NoReverseMatch, clear_url_caches, reverse
 from django.utils import six
+from django.utils.http import urlunquote_plus as urlunquote
 
-try:
-    from importlib import import_module
-except ImportError:
-    from django.utils.importlib import import_module
-
-from allauth.account import app_settings as account_settings
 from allauth.compat import parse_qs, urlparse
 from allauth.socialaccount.models import SocialApp
-from allauth.socialaccount.providers import registry
 from allauth.socialaccount.providers.fake.views import FakeOAuth2Adapter
-from allauth.socialaccount.tests import create_oauth2_tests
-from allauth.tests import MockedResponse
 
-from requests.exceptions import HTTPError
+from .views import MissingParameter, OAuth2LoginView, proxy_login_callback
 
-from .views import OAuth2Adapter, OAuth2LoginView, proxy_login_callback, MissingParameter
 
 class OAuth2TestsMixin(object):
     def param(self, param, url):
@@ -63,8 +51,10 @@ class OAuth2TestsNoProxying(OAuth2TestsMixin, TestCase):
         login_view = OAuth2LoginView.adapter_view(FakeOAuth2Adapter)
         login_response = login_view(request)
         self.assertEqual(login_response.status_code, 302)  # Redirect
-        self.assertEqual(self.param('redirect_uri', login_response['location']),
-                         'http://testserver/fake/login/callback/')
+        self.assertEqual(
+            self.param('redirect_uri', login_response['location']),
+            'http://testserver/fake/login/callback/',
+        )
 
     def test_is_not_login_proxy(self):
         with self.assertRaises(NoReverseMatch):
@@ -91,10 +81,10 @@ class OAuth2TestsUsesProxy(OAuth2TestsMixin, TestCase):
 
 
 @override_settings(
-    ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST=
-    'https://cheshirecat,https://tweedledee,',
-    ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST=
-    'sub.domain.com,'
+    ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST=(
+        'https://cheshirecat,https://tweedledee,'
+    ),
+    ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST='sub.domain.com,'
 )
 class OAuth2TestsIsProxy(OAuth2TestsMixin, TestCase):
     def reload_urls(self):

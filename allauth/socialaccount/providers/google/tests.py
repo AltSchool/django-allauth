@@ -210,13 +210,16 @@ class GoogleTests(OAuth2TestsMixin, TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_callback_android(self):
-        from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
-        from allauth.socialaccount.providers.google.views import GoogleOAuth2AndroidCallbackView
+        from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter # noqa
+        from allauth.socialaccount.providers.google.views import GoogleOAuth2AndroidCallbackView # noqa
 
         androidCallback = GoogleOAuth2AndroidCallbackView()
-        androidCallback.request = RequestFactory().get(reverse(self.provider.id + '_callback_android'))
+        androidCallback.request = RequestFactory().get(
+            reverse(self.provider.id + '_callback_android')
+        )
         androidCallback.adapter = GoogleOAuth2Adapter(androidCallback.request)
-        app = androidCallback.adapter.get_provider().get_app(androidCallback.request)
+        provider = androidCallback.adapter.get_provider()
+        app = provider.get_app(androidCallback.request)
 
         client = androidCallback.get_client(androidCallback.request, app)
         self.assertEqual("", client.callback_url)
