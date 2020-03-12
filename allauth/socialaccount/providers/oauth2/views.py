@@ -1,11 +1,7 @@
 from __future__ import absolute_import
 
 from datetime import timedelta
-
-from allauth.compat import urlparse, urljoin
-
 from requests import RequestException
-
 
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponseRedirect
@@ -13,6 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from allauth.account import app_settings
+from allauth.compat import urljoin, urlparse
 from allauth.exceptions import ImmediateHttpResponse
 from allauth.socialaccount import providers
 from allauth.socialaccount.helpers import (
@@ -25,13 +22,14 @@ from allauth.socialaccount.providers.oauth2.client import (
     OAuth2Client,
     OAuth2Error,
 )
-from allauth.utils import build_absolute_uri, get_request_param
+from allauth.utils import build_absolute_uri
 
 from ..base import AuthAction, AuthError
 
 
 class MissingParameter(Exception):
     pass
+
 
 class OAuth2Adapter(object):
     expires_in_key = 'expires_in'
@@ -84,14 +82,16 @@ class OAuth2View(object):
         return view
 
     def get_client(self, request, app):
-        callback_url = reverse(self.adapter.provider_id + "_callback")
         if app_settings.LOGIN_CALLBACK_PROXY:
-            callback_url = urljoin(app_settings.LOGIN_CALLBACK_PROXY, callback_url)
+            callback_url = reverse(self.adapter.provider_id + "_callback")
+            callback_url = urljoin(
+                app_settings.LOGIN_CALLBACK_PROXY,
+                callback_url,
+            )
             callback_url = '%s/proxy/' % callback_url.rstrip('/')
         else:
-            callback_url = build_absolute_uri(
-                request, callback_url,
-                protocol=self.adapter.redirect_uri_protocol)
+            callback_url = self.adapter.get_callback_url(request, app)
+
         provider = self.adapter.get_provider()
         scope = provider.get_scope(request)
         client = OAuth2Client(self.request, app.client_id, app.secret,
@@ -197,8 +197,8 @@ def proxy_login_callback(request, **kwargs):
     redirect = urljoin(unverified_state['host'], relative_callback)
 
     # URLUnparse would be ideal here, but it's buggy.
-    # It used a semicolon instead of a question mark, which neither Django nor I
-    # understand. Neither of us have time for that nonsense, so add params
+    # It used a semicolon instead of a question mark, which neither Django nor
+    # I understand. Neither of us have time for that nonsense, so add params
     # manually.
     redirect_with_params = '%s?%s' % (redirect, request.GET.urlencode())
     return HttpResponseRedirect(redirect_with_params)

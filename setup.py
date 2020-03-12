@@ -116,7 +116,7 @@ version = __import__('allauth').__version__
 
 METADATA = dict(
     name='django-allauth',
-    version=version,
+    version='0.20.1',
     author='Raymond Penners',
     author_email='raymond.penners@intenct.nl',
     description='Integrated set of Django applications addressing'
@@ -148,6 +148,8 @@ METADATA = dict(
         'Framework :: Django',
         'Framework :: Django :: 1.11',
         'Framework :: Django :: 2.0',
+        'Framework :: Django :: 2.1',
+        'Framework :: Django :: 2.2',
     ],
     packages=find_packages(exclude=['example']),
     package_data=package_data,
