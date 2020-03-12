@@ -55,9 +55,7 @@ class OAuth2Adapter(object):
 
     def get_callback_url(self, request, app):
         callback_url = reverse(self.provider_id + "_callback")
-        protocol = (
-            self.redirect_uri_protocol or app_settings.DEFAULT_HTTP_PROTOCOL
-        )
+        protocol = self.redirect_uri_protocol
         return build_absolute_uri(request, callback_url, protocol)
 
     def parse_token(self, data):
