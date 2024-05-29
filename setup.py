@@ -8,6 +8,14 @@ from setuptools import find_packages, setup
 
 long_description = io.open("README.rst", encoding="utf-8").read()
 
+IS_PY2 = sys.version_info[0] < 3
+
+if IS_PY2:
+    openid_package = 'python-openid >= 2.2.5'
+    test_requirements.append('mock >= 1.0.1')
+else:
+    openid_package = 'python3-openid >= 3.0.8'
+
 # Dynamically calculate the version based on allauth.VERSION.
 version = __import__("allauth").__version__
 
@@ -33,6 +41,7 @@ METADATA = dict(
     install_requires=[
         "Django >= 2.0",
         "python3-openid >= 3.0.8",
+        "openid_package",
         "requests-oauthlib >= 0.3.0",
         "requests",
         "pyjwt[crypto] >= 1.7",
