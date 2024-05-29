@@ -13,7 +13,7 @@ setup(
     description="Neat",
     include_package_data=True,
     install_requires=open('install_requires.txt').read().split('\n'),
-    name="some app"
+    name="django-allauth"
 )
 
 
