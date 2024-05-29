@@ -4,8 +4,6 @@ from setuptools import find_packages, setup
 
 test_requirements = []
 
-IS_PY2 = sys.version_info[0] < 3
-
 if IS_PY2:
     openid_package = 'python-openid >= 2.2.5'
     test_requirements.append('mock >= 1.0.1')
