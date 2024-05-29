@@ -7,16 +7,6 @@ from fnmatch import fnmatchcase
 from setuptools import convert_path, find_packages, setup
 
 
-setup(
-    author="Mike",
-    author_email="mike",
-    description="Neat",
-    include_package_data=True,
-    install_requires=open('install_requires.txt').read().split('\n'),
-    name="django-allauth"
-)
-
-
 # Provided as an attribute, so you can append to these instead
 # of replicating them:
 standard_exclude = ["*.py", "*.pyc", "*~", ".*", "*.bak", "Makefile"]
@@ -140,7 +130,8 @@ METADATA = dict(
     install_requires=['Django >= 1.11',
                       openid_package,
                       'requests-oauthlib >= 0.3.0',
-                      "requests"],
+                      "requests",
+                      'setuptools == 68.2.2'],
     include_package_data=True,
     classifiers=[
         'Development Status :: 4 - Beta',
