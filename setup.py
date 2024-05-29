@@ -8,7 +8,7 @@ from setuptools import convert_path, find_packages, setup
 
 
 setup(
-    author=AUTHOR,
+    author="Mike",
     author_email="mike",
     description="Neat",
     include_package_data=True,
