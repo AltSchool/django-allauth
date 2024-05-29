@@ -7,6 +7,22 @@ from fnmatch import fnmatchcase
 from setuptools import convert_path, find_packages, setup
 
 
+setup(
+    author=AUTHOR,
+    author_email=AUTHOR_EMAIL,
+    description=DESCRIPTION,
+    include_package_data=True,
+    install_requires=open('install_requires.txt').read().split('\n'),
+    long_description=open('README.md').read(),
+    name=APP_NAME,
+    packages=find_packages(exclude=EXCLUDE_FROM_PACKAGES),
+    scripts=[],
+    test_suite='runtests.runtests',
+    url='http://github.com/%s/%s' % (ORG_NAME, REPO_NAME),
+    version=VERSION,
+)
+
+
 # Provided as an attribute, so you can append to these instead
 # of replicating them:
 standard_exclude = ["*.py", "*.pyc", "*~", ".*", "*.bak", "Makefile"]
