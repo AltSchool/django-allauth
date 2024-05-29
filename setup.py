@@ -13,10 +13,7 @@ setup(
     description="Neat",
     include_package_data=True,
     install_requires=open('install_requires.txt').read().split('\n'),
-    long_description=open('README.md').read(),
-    name="some app",
-    scripts=[],
-    test_suite='runtests.runtests',
+    name="some app"
 )
 
 
