@@ -1,14 +1,9 @@
 #!/usr/bin/env python
 import io
+import sys
 from setuptools import find_packages, setup
 
 test_requirements = []
-
-if IS_PY2:
-    openid_package = 'python-openid >= 2.2.5'
-    test_requirements.append('mock >= 1.0.1')
-else:
-    openid_package = 'python3-openid >= 3.0.8'
 
 long_description = io.open('README.rst', encoding='utf-8').read()
 
