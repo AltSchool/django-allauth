@@ -12,7 +12,8 @@ from django.contrib.sites.models import Site
 from django.core.exceptions import ImproperlyConfigured
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import ValidationError, validate_email
-from django.db.models import FieldDoesNotExist, FileField
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import FileField
 from django.db.models.fields import (
     BinaryField,
     DateField,
