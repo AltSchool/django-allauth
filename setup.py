@@ -24,7 +24,7 @@ METADATA = dict(
     ' registration',
     tests_require=test_requirements,
     install_requires=['Django >= 1.11',
-                      'openid_package',
+                      'FieldDoesNotExist',
                       'requests-oauthlib >= 0.3.0',
                       "requests"],
     include_package_data=True,
