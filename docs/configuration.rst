@@ -52,9 +52,9 @@ ACCOUNT_EMAIL_REQUIRED (=False)
 ACCOUNT_EMAIL_VERIFICATION (="optional")
   Determines the e-mail verification method during signup -- choose
   one of ``"mandatory"``, ``"optional"``, or ``"none"``.
-  
+
   Setting this to `"mandatory"` requires `ACCOUNT_EMAIL_REQUIRED` to be `True`
-  
+
   When set to "mandatory" the user is blocked from logging in until the email
   address is verified. Choose "optional" or "none" to allow logins
   with an unverified e-mail address. In case of "optional", the e-mail
@@ -88,6 +88,15 @@ ACCOUNT_EMAIL_MAX_LENGTH(=254)
   More information can be found at `MySQL's documentation on converting between
   3-byte and 4-byte Unicode character sets
   <https://dev.mysql.com/doc/refman/5.5/en/charset-unicode-conversion.html>`_.
+
+ACCOUNT_MAX_EMAIL_ADDRESSES(=None)
+  The maximum amount of email addresses a user can associate to his account. It
+  is safe to change this setting for an already running project -- it will not
+  negatively affect users that already exceed the allowed amount. Note that if
+  you set the maximum to 1, users will not be able to change their email address
+  as they are unable to add the new address, followed by removing the old
+  address.
+
 
 ACCOUNT_FORMS (={})
   Used to override forms, for example:
@@ -143,9 +152,9 @@ ACCOUNT_LOGIN_ON_PASSWORD_RESET (=False)
   once they have reset their password. By default they are redirected to the
   password reset done page.
 
-ACCOUNT_LOGOUT_REDIRECT_URL (="/")
-  The URL (or URL name) to return to after the user logs out. This is
-  the counterpart to Django's ``LOGIN_REDIRECT_URL``.
+ACCOUNT_LOGOUT_REDIRECT_URL (=`settings.LOGOUT_REDIRECT_URL or "/"`)
+  The URL (or URL name) to return to after the user logs out. Defaults to
+  Django's `LOGOUT_REDIRECT_URL`, unless that is empty, then `"/"` is used.
 
 ACCOUNT_PASSWORD_INPUT_RENDER_VALUE (=False)
   ``render_value`` parameter as passed to ``PasswordInput`` fields.
@@ -175,6 +184,14 @@ ACCOUNT_SIGNUP_FORM_CLASS (=None)
 
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE (=True)
   When signing up, let the user type in their password twice to avoid typos.
+
+ACCOUNT_SIGNUP_REDIRECT_URL (=``settings.LOGIN_REDIRECT_URL``)
+  The URL (or URL name) to redirect to directly after signing up. Note that
+  users are only redirected to this URL if the signup went through
+  uninterruptedly, for example, without any side steps due to email
+  verification. If your project requires the user to always pass through certain
+  onboarding views after signup, you will have to keep track of state indicating
+  whether or not the user successfully onboarded, and handle accordingly.
 
 ACCOUNT_TEMPLATE_EXTENSION (="html")
   A string defining the template extension to use, defaults to ``html``.
@@ -209,30 +226,6 @@ ACCOUNT_USERNAME_REQUIRED (=True)
   the user will be asked to do so even if
   ``ACCOUNT_AUTHENTICATION_METHOD`` is set to ``email``. Set to ``False``
   when you do not wish to prompt the user to enter a username.
-
-ACCOUNT_LOGIN_CALLBACK_PROXY (="")
-  Redirect the login callback to this remote server or endpoint, instead of the
-  default endpoint on the local server. The remote server could be any server.
-  However, it is suggested that the remote server be an instance of the local
-  server, at a dedicated URL. By enabling
-  ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST on the remote server, it will function
-  as a reverse proxy. It will forward the callback request to the local server.
-
-  This is useful for working around an OAuth2 redirect_uri whitelist.
-
-  Specifically, this is useful for authenticating arbitrarily-named and
-  short-lived feature deploys on Google's OAuth2 endpoint. Rather than
-  adding each name to the redirect_uri whitelist, one can permanently
-  redirect to the LOGIN_CALLBACK_PROXY instead, which forwards the OAuth2 code
-  to the feature-deploy.
-
-ACCOUNT_LOGIN_PROXY_REDIRECT_WHITELIST (="")
-  List of remote servers to which this server may forward OAuth2 token proxy
-  redirects (see above).
-
-ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST (="")
-  List of remote servers to which this server may forward OAuth2 token proxy
-  redirects (see above).
 
 ACCOUNT_USERNAME_VALIDATORS (=None)
   A path
@@ -296,10 +289,6 @@ ACCOUNT_SESSION_COOKIE_AGE (=1814400)
   How long before the session cookie expires in seconds.  Defaults to 1814400 seconds,
   or 3 weeks.
 
-ACCOUNT_LOGIN_PROXY_REDIRECT_DOMAIN_WHITELIST (="")
-  List of remote servers to which this server may forward OAuth2 token proxy
-  redirects (see above).
-
 SOCIALACCOUNT_ADAPTER (="allauth.socialaccount.adapter.DefaultSocialAccountAdapter")
   Specifies the adapter class to use, allowing you to alter certain
   default behaviour.
@@ -321,8 +310,50 @@ SOCIALACCOUNT_FORMS (={})
   Used to override forms, for example:
   ``{'signup': 'myapp.forms.SignupForm'}``
 
+SOCIALACCOUNT_LOGIN_ON_GET (=False)
+  Controls whether or not the endpoints for initiating a social login (for
+  example, "/accounts/google/login/") require a POST request to initiate the
+  handshake. For security considerations, it is strongly recommended to
+  require POST requests.
+
 SOCIALACCOUNT_PROVIDERS (= dict)
   Dictionary containing provider specific settings.
+
+  The 'APP' section for each provider is generic to all providers and
+  can also be specified in the database using a ``SocialApp`` model
+  instance instead of here. All other sections are provider-specific and
+  are documented in the `for each provider separately
+  <providers.html>`__.
+
+  Example::
+
+    SOCIALACCOUNT_PROVIDERS = {
+        "github": {
+            # For each provider, you can choose whether or not the
+            # email address(es) retrieved from the provider are to be
+            # interpreted as verified.
+            "VERIFIED_EMAIL": True
+        },
+        "google": {
+            # For each OAuth based provider, either add a ``SocialApp``
+            # (``socialaccount`` app) containing the required client
+            # credentials, or list them here:
+            "APP": {
+                "client_id": "123",
+                "secret": "456",
+                "key": ""
+            },
+            # These are provider-specific settings that can only be
+            # listed here:
+            "SCOPE": [
+                "profile",
+                "email",
+            ],
+            "AUTH_PARAMS": {
+                "access_type": "online",
+            }
+        }
+    }
 
 SOCIALACCOUNT_QUERY_EMAIL (=ACCOUNT_EMAIL_REQUIRED)
   Request e-mail address from 3rd party account provider? E.g. using

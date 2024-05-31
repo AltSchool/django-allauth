@@ -1,3 +1,160 @@
+0.47.0 (2021-12-09)
+*******************
+
+Note worthy changes
+-------------------
+
+- New providers: Gumroad.
+
+
+Backwards incompatible changes
+------------------------------
+
+- Added a new setting `SOCIALACCOUNT_LOGIN_ON_GET` that controls whether or not
+  the endpoints for initiating a social login (for example,
+  "/accounts/google/login/") require a POST request to initiate the
+  handshake. As requiring a POST is more secure, the default of this new setting
+  is `False`.
+
+
+Security notice
+---------------
+
+Automatically signing in users into their account and connecting additional
+third party accounts via a simple redirect ("/accounts/facebook/login/") can
+lead to unexpected results and become a security issue especially when the
+redirect is triggered from a malicious web site. For example, if an attacker
+prepares a malicious website that (ab)uses the Facebook password recovery
+mechanism to first sign into his/her own Facebook account, followed by a
+redirect to connect a new social account, you may end up with the attacker's
+Facebook account added to the account of the victim. To mitigate this,
+`SOCIALACCOUNT_LOGIN_ON_GET` is introduced.
+
+
+0.46.0 (2021-11-15)
+*******************
+
+Note worthy changes
+-------------------
+
+- New providers: Gitea, MediaWiki.
+
+- New translations: Georgian, Mongolian.
+
+- Django 3.2 compatibility.
+
+
+0.45.0 (2021-07-11)
+*******************
+
+
+Note worthy changes
+-------------------
+
+- New providers: Feishu, NetIQ, Frontier, CILogin.
+
+
+0.44.0 (2020-11-25)
+*******************
+
+Security notice
+---------------
+
+In previous versions, the mechanism to prevent too many failed login attempts
+(``ACCOUNT_LOGIN_ATTEMPTS_LIMIT``) could be bypassed by changing the casing of
+the login.
+
+
+Backwards incompatible changes
+------------------------------
+
+- The ``certificate`` key part of the ``SOCIALACCOUNT_PROVIDERS`` configuration has
+  been renamed to ``certificate_key``. This is done to prevent the key from being displayed
+  without being masked in Django debug pages.
+
+0.44.0
+******
+
+- Better compatibility with Django 3.2
+
+
+0.43.0 (2020-10-15)
+*******************
+
+Note worthy changes
+-------------------
+
+- New translation: Slovenian.
+
+- If ``ACCOUNT_LOGIN_ATTEMPTS_LIMIT`` is set and the user successfully
+  resets their password, the timeout is cleared to allow immediate login.
+
+- You can now limit the amount of email addresses a user can associate to his
+  account by setting ``ACCOUNT_MAX_EMAIL_ADDRESSES``.
+
+- New providers: Apple, Okta, Stocktwits, Zoho, Zoom.
+
+- If email verification is set to mandatory, the email address you use to login
+  with must now be verified as well. In previous versions, it was sufficient if
+  the account had at least one verified email address, not necessarily the one
+  used to login with.
+
+- Added a new setting: ``ACCOUNT_SIGNUP_REDIRECT_URL`` -- the URL (or URL
+  name) to redirect to directly after signing up.
+
+
+Backwards incompatible changes
+------------------------------
+
+- In previous versions, the ``allauth`` app included a ``base.html``
+  template. This template could conflict with an equally named template at
+  project level. Therefore, ``base.html`` has now been moved to
+  ``account/base.html`` -- you will need to check your templates and likely
+  override ``account/base.html`` within your project.
+
+
+0.42.0 (2020-05-24)
+*******************
+
+Note worthy changes
+-------------------
+
+- New providers: EDX, Yandex, Mixer.
+
+- Fixed Twitch ``get_avatar_url()`` method to use the profile picture retrieved
+  by new user details endpoint introduced in version 0.40.0.
+
+- The Facebook API version now defaults to v7.0.
+
+
+0.41.0 (2019-12-18)
+*******************
+
+Security notice
+---------------
+
+- See `CVE-2019-19844
+  <https://www.djangoproject.com/weblog/2019/dec/18/security-releases/>`_.
+
+
+Note worthy changes
+-------------------
+
+- New providers: Exist.io., YNAB, Amazon Cognito.
+
+- You can now store OAuth credentials directly in your
+  ``settings.SOCIALACCOUNT_PROVIDERS`` settings instead of storing them in the
+  database using a ``SocialApp`` record.
+
+- Adding Keycloak Provider
+
+
+Backwards incompatible changes
+------------------------------
+
+- Dropped Python 2 and Django 1 compatibility.
+
+
 0.40.0 (2019-08-29)
 *******************
 
