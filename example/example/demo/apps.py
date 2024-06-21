@@ -2,6 +2,8 @@ from django.apps import AppConfig
 from django.db.models.signals import post_migrate
 from django.utils.translation import gettext_lazy as _
 
+from allauth.compat import ugettext_lazy as _
+
 
 def setup_dummy_social_apps(sender, **kwargs):
     """

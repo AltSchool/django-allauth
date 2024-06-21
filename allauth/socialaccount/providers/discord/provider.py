@@ -24,6 +24,12 @@ class DiscordAccount(ProviderAccount):
                 **self.account.extra_data
             )
 
+    def get_avatar_url(self):
+        if ('id' in self.account.extra_data.keys()
+                and 'avatar' in self.account.extra_data.keys()):
+            return 'https://cdn.discordapp.com/avatars/{id}/{avatar}.png'\
+                .format(**self.account.extra_data)
+
 
 class DiscordProvider(OAuth2Provider):
     id = "discord"
@@ -48,6 +54,15 @@ class DiscordProvider(OAuth2Provider):
         email = data.get("email")
         if email and data.get("verified"):
             ret.append(EmailAddress(email=email, verified=True, primary=True))
+        return ret
+
+    def extract_email_addresses(self, data):
+        ret = []
+        email = data.get('email')
+        if email and data.get('verified'):
+            ret.append(EmailAddress(email=email,
+                       verified=True,
+                       primary=True))
         return ret
 
 

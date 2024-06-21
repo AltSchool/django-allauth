@@ -30,5 +30,16 @@ class NaverProvider(OAuth2Provider):
             ret.append(EmailAddress(email=email, verified=True, primary=True))
         return ret
 
+    def extract_common_fields(self, data):
+        email = data.get("email")
+        return dict(email=email)
+
+    def extract_email_addresses(self, data):
+        ret = []
+        email = data.get("email")
+        if email:
+            ret.append(EmailAddress(email=email, verified=True, primary=True))
+        return ret
+
 
 provider_classes = [NaverProvider]
