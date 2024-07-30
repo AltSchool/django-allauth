@@ -1,3 +1,5 @@
+## Archived in favor of https://github.com/AltSchool/django-allauth-with-fake
+
 ==========================
 Welcome to django-allauth!
 ==========================
