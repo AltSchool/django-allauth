@@ -1,4 +1,4 @@
-## Archived in favor of https://github.com/AltSchool/django-allauth-with-fake
+ARCHIVED IN FAVOR OF https://github.com/AltSchool/django-allauth-with-fake
 
 ==========================
 Welcome to django-allauth!
